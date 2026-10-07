@@ -10,8 +10,8 @@ const fakeRecStart = Date.now() / 1000;
 
 const COMMANDS: Record<string, (args?: Record<string, unknown>) => unknown> = {
   get_db_url: () => "sqlite:preview",
-  // ?call=1: a Meet window is in front, so "Sembra una call" shows up.
-  foreground_window_title: () => (params.get("call") === "1" ? "Riunione settimanale - Google Meet" : ""),
+  // ?call=1: a Meet window is in front, so "Looks like a call" shows up.
+  foreground_window_title: () => (params.get("call") === "1" ? "Weekly meeting - Google Meet" : ""),
   companion_tray_ready: () => true,
   // Recording works on the bench (nothing is captured): the UI can be looked at
   // while it records. ?silence=1 makes the recorder report a long silence, so the
@@ -30,13 +30,13 @@ const COMMANDS: Record<string, (args?: Record<string, unknown>) => unknown> = {
     await new Promise((r) => setTimeout(r, Number(params.get("trms") ?? 5000)));
     fakeTr = null;
     const segments = [
-      { start: 0, end: 3.2, speaker: "Tu", text: "Proviamo Mori sul banco di prova." },
-      { start: 3.4, end: 6.8, speaker: "Interlocutore", text: "Funziona: si vede anche la trascrizione." },
+      { start: 0, end: 3.2, speaker: "Tu", text: "Let's try Mori on the preview bench." },
+      { start: 3.4, end: 6.8, speaker: "Interlocutore", text: "It works: the transcript shows up too." },
     ];
     const text = segments.map((s) => `${s.speaker}: ${s.text}`).join("\n");
     // ?cloudfail=1: Groq refused, the local Whisper did it (the app says why).
     const cloud_error = params.get("cloudfail") === "1" ? 'cloud: HTTP 401: {"error":"Invalid API Key"}' : undefined;
-    return JSON.stringify({ audio_path: null, cloud_error, result: { text, language: "it", segments } });
+    return JSON.stringify({ audio_path: null, cloud_error, result: { text, language: "en", segments } });
   },
   transcribe_progress: () => {
     if (!fakeTr) return null;
@@ -46,7 +46,7 @@ const COMMANDS: Record<string, (args?: Record<string, unknown>) => unknown> = {
     return JSON.stringify({ stage: "run", done, total: fakeTr.total, started: fakeTr.startedAt / 1000, t: Date.now() / 1000 });
   },
   // The two voices, live: both sides talk in turns; ?deadsys=1 → the PC's audio
-  // stays silent while you talk (the "Non sento l'altra parte" warning).
+  // stays silent while you talk (the "I can't hear the other side" warning).
   recording_levels: () => {
     const t = Date.now() / 1000;
     const dead = params.get("deadsys") === "1";
@@ -58,7 +58,7 @@ const COMMANDS: Record<string, (args?: Record<string, unknown>) => unknown> = {
       sys: sysOn ? 0.06 + 0.05 * Math.abs(Math.sin(t * 2.3)) : 0.001,
       mic_quiet: 0,
       sys_quiet: dead ? quiet : 0,
-      errs: params.get("deadmic") === "1" ? ["mic: dispositivo scollegato"] : [],
+      errs: params.get("deadmic") === "1" ? ["mic: device unplugged"] : [],
     });
   },
   recording_silence_secs: () => (params.get("silence") === "1" ? 3600 : 0),
@@ -67,7 +67,7 @@ const COMMANDS: Record<string, (args?: Record<string, unknown>) => unknown> = {
   audio_stats: () => ({ wav_count: 0, wav_bytes: 0, flac_count: 4, flac_bytes: 61_000_000 }),
   // No ONNX here: recall degrades to lexical-only, exactly like the app does.
   embed_texts: () => {
-    throw new Error("embedding non disponibile nel banco di prova");
+    throw new Error("embeddings are not available on the preview bench");
   },
 };
 
@@ -86,18 +86,18 @@ export async function listen(ev: string, cb: (e: { payload: unknown }) => void):
   if (ev === "companion://pill") {
     const kind = new URLSearchParams(location.search).get("pill") ?? "started";
     const payloads: Record<string, unknown> = {
-      started: { kind: "started", title: "Registrazione avviata", subtitle: "Tu e l'interlocutore", hint: "Ctrl+Shift+R per fermare" },
-      stopped: { kind: "stopped", title: "Registrazione fermata", subtitle: "12:04 · la sto trascrivendo" },
+      started: { kind: "started", title: "Recording started", subtitle: "You and the other side", hint: "Ctrl+Shift+R to stop" },
+      stopped: { kind: "stopped", title: "Recording stopped", subtitle: "12:04 · transcribing it now" },
       silence: {
         kind: "silence",
-        title: "Sembra finita",
-        subtitle: "8 minuti senza una parola, da nessuno dei due lati. Fermo e mando in trascrizione.",
+        title: "It seems over",
+        subtitle: "8 minutes without a word, from either side. Stopping and sending it to transcription.",
         seconds: 37,
       },
-      status: { kind: "status", phase: "recording", title: "Registro", since: Date.now() - 754_000 },
-      warn: { kind: "status", phase: "recording", title: "Registro", since: Date.now() - 754_000, hint: "Non sento l'altra parte" },
-      transcribing: { kind: "status", phase: "transcribing", title: "Trascrivo la call", subtitle: "42% · circa 3 min · +1 in coda", progress: 0.42 },
-      understanding: { kind: "status", phase: "understanding", title: "Capisco la call", subtitle: "parte 2 di 3", progress: 0.375 },
+      status: { kind: "status", phase: "recording", title: "Recording", since: Date.now() - 754_000 },
+      warn: { kind: "status", phase: "recording", title: "Recording", since: Date.now() - 754_000, hint: "I can't hear the other side" },
+      transcribing: { kind: "status", phase: "transcribing", title: "Transcribing the call", subtitle: "42% · about 3 min · +1 in the queue", progress: 0.42 },
+      understanding: { kind: "status", phase: "understanding", title: "Understanding the call", subtitle: "part 2 of 3", progress: 0.375 },
     };
     setTimeout(() => cb({ payload: payloads[kind] ?? payloads.started }), 0);
   }
@@ -122,7 +122,7 @@ export async function fetch(_url: string, init?: { body?: string; headers?: Reco
   const system = req.messages?.[0]?.content ?? "";
   if (req.stream) {
     const cite = system.match(/\n(\[[^\]\n]+ — [^\]\n]+\])\n/)?.[1] ?? "";
-    const answer = `Dalle tue call: la cosa più vicina a quello che chiedi è **${cite ? cite.slice(1, cite.indexOf(" — ")) : "nessuna"}** ${cite}.`;
+    const answer = `From your calls: the closest thing to what you ask is **${cite ? cite.slice(1, cite.indexOf(" — ")) : "none"}** ${cite}.`;
     const words = answer.split(/(?<= )/);
     const enc = new TextEncoder();
     const body = new ReadableStream({
@@ -137,7 +137,7 @@ export async function fetch(_url: string, init?: { body?: string; headers?: Reco
     });
     return new Response(body, { status: 200, headers: { "content-type": "text/event-stream" } });
   }
-  // "Verifica" / the first step's "Collega": a key with "bad" in it is refused.
+  // The "Test" button / the first step's "Connect": a key with "bad" in it is refused. (The app's model prompts stay in Italian, so the matches below are Italian.)
   if (system.startsWith("Rispondi solo con la parola: pronto")) {
     if (/bad/.test(init?.headers?.Authorization ?? "")) {
       return new Response('{"error":{"message":"Invalid API Key"}}', { status: 401 });
@@ -148,14 +148,14 @@ export async function fetch(_url: string, init?: { body?: string; headers?: Reco
     });
   }
   if (system.startsWith("Scrivi la mail di follow-up")) {
-    const text = "Oggetto: Sync settimanale — prossimi passi\n\nCiao Giulia, ciao Sara,\n\ngrazie per la call di oggi. Riassumo quello che ci siamo detti…\n\nLuca";
+    const text = "Subject: Weekly sync — next steps\n\nHi Julia, hi Sarah,\n\nthanks for today's call. Here is a recap of what we said…\n\nAlex";
     return new Response(JSON.stringify({ choices: [{ message: { content: text } }] }), {
       status: 200,
       headers: { "content-type": "application/json" },
     });
   }
   // ?understand=1: a model that understands a call (organize), slowly, so the
-  // "Capisco" line can be looked at; ?understand=429 also asks for a pause once.
+  // "Understanding" line can be looked at; ?understand=429 also asks for a pause once.
   const und = params.get("understand");
   if (und && /Restituisci SOLO un JSON valido|Leggi questa PARTE/.test(system)) {
     if (und === "429" && !askedPause) {
@@ -164,11 +164,11 @@ export async function fetch(_url: string, init?: { body?: string; headers?: Reco
     }
     await new Promise((r) => setTimeout(r, Number(params.get("undms") ?? 3000)));
     const content = /Leggi questa PARTE/.test(system)
-      ? JSON.stringify({ punti: ["Un punto della call."], azioni: [] })
+      ? JSON.stringify({ punti: ["One point from the call."], azioni: [] })
       : JSON.stringify({
-          title: "Prova sul banco",
-          summary: "## Di cosa si è parlato\n- Una prova di Mori sul banco.",
-          actions: [{ text: "Riascoltare la prova", assignee: "Tu", due: null }],
+          title: "Bench test",
+          summary: "## What was discussed\n- A test of Mori on the bench.",
+          actions: [{ text: "Listen to the test again", assignee: "Tu", due: null }],
           categories: [],
           memories: [],
           entities: [],
@@ -180,6 +180,6 @@ export async function fetch(_url: string, init?: { body?: string; headers?: Reco
       headers: { "content-type": "application/json", "x-ratelimit-limit-tokens": "8000", "x-ratelimit-remaining-tokens": "6000", "x-ratelimit-reset-tokens": "7.5s" },
     });
   }
-  throw new Error("nessun modello nel banco di prova");
+  throw new Error("no model on the preview bench");
 }
 let askedPause = false;

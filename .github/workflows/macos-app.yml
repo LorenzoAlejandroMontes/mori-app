@@ -173,7 +173,8 @@ jobs:
           # The app looks for scripts next to its source folder first. On this
           # machine that folder exists; hide it so the app can only use its own.
           mv scripts scripts.checkout
-          open --stdout "$R/app.out" --stderr "$R/app.err" "$APP"
+          # The PATH of an app opened from Finder: none of this shell's Pythons.
+          open --env PATH=/usr/bin:/bin:/usr/sbin:/sbin --stdout "$R/app.out" --stderr "$R/app.err" "$APP"
           PYV="$HOME/.mori/venv/bin/python"
           SHOT=0
           for i in $(seq 1 200); do
@@ -282,7 +283,7 @@ jobs:
           mv scripts scripts.checkout
           T=$(getconf DARWIN_USER_TEMP_DIR)
           rm -f "$T"/mori_rec_* || true
-          open --stdout "$R/app.out" --stderr "$R/app.err" "$APP"
+          open --env PATH=/usr/bin:/bin:/usr/sbin:/sbin --stdout "$R/app.out" --stderr "$R/app.err" "$APP"
           sleep 12
           echo "## processes"; pgrep -fl "Mori.app" || { echo "the app is not running"; cat "$R/app.err" || true; exit 1; }
           screencapture -x "$R/app_open.png"
@@ -352,13 +353,13 @@ jobs:
           for i in $(seq 1 120); do
             sqlite3 "$HOME/.mori/mori.db" "$Q" > "$R/transcript_in_app.txt" 2>/dev/null || true
             grep -qi "thursday" "$R/transcript_in_app.txt" && break
-            [ $((i % 6)) -eq 0 ] && { echo "waiting ($((i * 5)) s)"; sqlite3 "$HOME/.mori/mori.db" "select kind, status, substr(coalesce(error, ''), 1, 200) from job" 2>/dev/null || true; }
+            [ $((i % 6)) -eq 0 ] && { echo "waiting ($((i * 5)) s)"; sqlite3 "$HOME/.mori/mori.db" "select kind, status, attempts, coalesce(last_error, '') from job" 2>/dev/null || true; }
             [ "$i" = 4 ] && screencapture -x "$R/app_transcribing.png"
             sleep 5
           done
           echo "## what Mori wrote down"
           cat "$R/transcript_in_app.txt"
-          sqlite3 "$HOME/.mori/mori.db" "select kind, status, substr(coalesce(error, ''), 1, 200) from job" | tee "$R/jobs_in_app.txt" || true
+          sqlite3 "$HOME/.mori/mori.db" "select kind, status, attempts, coalesce(last_error, '') from job" | tee "$R/jobs_in_app.txt" || true
           sleep 3
           screencapture -x "$R/app_transcribed.png"
           grep -qi "thursday" "$R/transcript_in_app.txt" || { echo "the transcript did not arrive"; ls -la "$HOME/.mori" "$HOME/.cache/huggingface/hub" 2>/dev/null || true; exit 1; }
@@ -389,7 +390,13 @@ jobs:
           sleep 1
           screencapture -x "$R/app_after_quit.png"
           echo "## what is still running (nothing should be)"
-          pgrep -fl "Mori.app/Contents/MacOS/mori$" && { echo "Mori is still running after Cmd+Q"; exit 1; } || true
+          if pgrep -fl "Mori.app/Contents/MacOS/mori$"; then
+            echo "Mori is still running after Cmd+Q: what it is doing"
+            sample "$(pgrep -f "Mori.app/Contents/MacOS/mori$" | head -1)" 2 -file "$R/mori_after_quit_sample.txt" > /dev/null 2>&1 || true
+            head -120 "$R/mori_after_quit_sample.txt" || true
+            sqlite3 "$HOME/.mori/mori.db" "select kind, status, attempts, coalesce(last_error, '') from job" || true
+            exit 1
+          fi
           pgrep -fl "record.py" && { echo "the recorder was left running"; exit 1; } || true
           pgrep -fl "mori-sysaudio" && { echo "the helper was left running"; exit 1; } || true
           [ -f "$WAV2.done" ] || { echo "the recorder was not stopped cleanly: no $WAV2.done"; ls -la "$T" | grep mori_rec || true; exit 1; }

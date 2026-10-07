@@ -10,6 +10,7 @@ import Dragon from "../ui/Mark";
 import { fmtClock, fmtDate } from "../ui/format";
 import { hotkeyParts } from "../ui/keys";
 import { modKey } from "../ui/platform";
+import { speakerLabel } from "../speakers-logic";
 import { IconFile, IconKeyboard, IconMoon, IconPlus, IconSettings, IconSun, IconWave } from "../ui/icons";
 import { SECTIONS } from "./Sidebar";
 import type { SettingsSection } from "./settings/SettingsView";
@@ -121,7 +122,7 @@ export default function CommandPalette({
         label: (
           <span className="cmd-hit">
             <span className="cmd-hit-text">
-              {h.speaker && <b>{h.speaker}: </b>}
+              {h.speaker && <b>{speakerLabel(h.speaker)}: </b>}
               {h.snippet.before}
               <mark>{h.snippet.match}</mark>
               {h.snippet.after}

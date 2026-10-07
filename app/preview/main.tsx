@@ -1,7 +1,7 @@
 // Preview bench: mounts the REAL app (or one of its views) with the real CSS,
 // on a real in-browser SQLite with invented data — no Tauri, no ~/.mori.
 //
-//   ?v=app (default) the whole app        ?v=todos  "Da fare" alone
+//   ?v=app (default) the whole app        ?v=todos  "To do" alone
 //   ?v=people        people & projects    ?v=pill&pill=started|stopped|silence
 //   &fresh=1         a brand-new install (migrations only)
 import React from "react";
@@ -21,7 +21,7 @@ const forced = new URLSearchParams(location.search).get("theme");
 if (forced === "dark" || forced === "light") setTheme(forced);
 else applyTheme();
 const noop = () => {};
-const MY = ["Tu", "te", "io", "me", "Luca"];
+const MY = ["Tu", "te", "io", "me", "Alex"];
 
 const root = ReactDOM.createRoot(document.getElementById("root") as HTMLElement);
 if (which === "pill") {

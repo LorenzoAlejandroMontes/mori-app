@@ -26,7 +26,7 @@ const errors = [];
 
 for (const [width, height] of sizes) {
   for (const theme of ["light", "dark"]) {
-    const p = await browser.newPage({ viewport: { width, height }, colorScheme: theme, locale: process.env.MORI_LANG || "it-IT" });
+    const p = await browser.newPage({ viewport: { width, height }, colorScheme: theme, locale: process.env.MORI_LANG || "en-US" });
     p.on("pageerror", (e) => errors.push(`${theme} ${width}x${height}: ${e.message}`));
     for await (const name of screens(p, base)) {
       await p.screenshot({ path: `${out}/${theme}-${width}-${name}.png` });

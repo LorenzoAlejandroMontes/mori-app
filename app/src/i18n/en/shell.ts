@@ -195,7 +195,7 @@ export default {
   "es. Allineamento autofatture": "e.g. Self-billing invoices sync",
   "Trascritto": "Transcript",
   "Incolla qui il testo della conversazione…\nes. Tu: partiamo dall'onboarding\nGiulia: il design è chiuso":
-    "Paste the conversation here…\ne.g. You: let's start with onboarding\nGiulia: the design is locked",
+    "Paste the conversation here…\ne.g. You: let's start with onboarding\nJulia: the design is locked",
   "Privata": "Private",
   "La legge solo un modello sul tuo PC, mai il cloud.": "Only a model on your PC reads it, never the cloud.",
   "Aggiungo…": "Adding…",
@@ -226,7 +226,7 @@ export default {
   "Salvo la registrazione…": "Saving the recording…",
   "Sembra finita: tra un minuto fermo la registrazione e la trascrivo.":
     "Looks like it's over: in a minute I'll stop the recording and transcribe it.",
-  "Sembra finita: fermo tra {left}": "Looks like it's over: stopping in {left}",
+  "Sembra finita: fermo tra {left}": "Seems over: stopping in {left}",
   "Continua": "Keep going",
   "Ferma ora": "Stop now",
   "Chiudo Mori": "Closing Mori",

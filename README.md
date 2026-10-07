@@ -6,7 +6,7 @@
 
 > 🇮🇹 Mori è un compagno per le tue call: registra, trascrive sul tuo PC, ricorda persone, decisioni e cose da fare, e risponde citando la call giusta. L'interfaccia è in italiano. Il resto di questo README è in inglese per chi vuole contribuire.
 
-![Oggi: the page Mori opens on](docs/screenshots/oggi.png)
+![Today: the page Mori opens on](docs/screenshots/today.png)
 
 ## What it does
 
@@ -28,9 +28,9 @@
 
 | | |
 |---|---|
-| ![Ask Mori](docs/screenshots/chiedi-a-mori.png) | ![A call, its transcript with the two voices](docs/screenshots/call.png) |
-| ![A private call](docs/screenshots/call-privata.png) | ![Settings, as a page](docs/screenshots/impostazioni.png) |
-| ![Recording, and "it seems over": stop in 58 s](docs/screenshots/registrazione-scuro.png) | ![⌘K finds what was said](docs/screenshots/cmdk-scuro.png) |
+| ![Ask Mori](docs/screenshots/ask-mori.png) | ![A call, its transcript with the two voices](docs/screenshots/call.png) |
+| ![A private call](docs/screenshots/private-call.png) | ![Settings, as a page](docs/screenshots/settings.png) |
+| ![Recording, and "it seems over": stop in 7 s](docs/screenshots/recording-dark.png) | ![⌘K finds what was said](docs/screenshots/cmdk-dark.png) |
 
 <sub>Screenshots use invented data from the preview bench (`app/preview/fixtures.ts`). The design rules: [`docs/DESIGN.md`](docs/DESIGN.md).</sub>
 

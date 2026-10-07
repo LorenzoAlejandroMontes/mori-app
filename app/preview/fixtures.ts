@@ -1,6 +1,6 @@
-// Invented data for the preview bench: a small product studio, "Nuvola". Every
+// Invented data for the preview bench: a small product studio, "Cloudly". Every
 // name, number and sentence here is fictional. Dates are relative to "now" so
-// the "Oggi" page always looks like a real morning.
+// the "Today" page always looks like a real morning.
 
 const DAY = 86_400_000;
 const at = (daysAgo: number, h: number, m = 0) => {
@@ -34,107 +34,107 @@ type Call = {
 const CALLS: Call[] = [
   {
     id: "c-sync",
-    title: "Sync settimanale prodotto",
+    title: "Weekly product sync",
     started: at(0, 9, 30),
-    people: ["Giulia Ferri", "Sara Conti"],
-    summary: `## Di cosa si è parlato
-- Lo stato del **nuovo onboarding**: design pronto, mancano i testi.
-- Il crash su Android 14 segnalato da tre utenti.
-- La demo per Marco di **giovedì**.
+    people: ["Julia Ferris", "Sarah Collins"],
+    summary: `## What was discussed
+- The state of the **new onboarding**: design is ready, the copy is missing.
+- The Android 14 crash reported by three users.
+- The demo for Mark on **Thursday**.
 
-## Decisioni
-- Si rilascia l'onboarding **martedì prossimo**, anche senza animazioni.
-- Il crash ha la priorità su tutto il resto.
+## Decisions
+- The onboarding ships **next Tuesday**, even without animations.
+- The crash comes before everything else.
 
-## Aperto
-- Chi scrive i testi dell'onboarding?`,
+## Open
+- Who writes the onboarding copy?`,
     segments: [
-      { start: 2.1, end: 7.8, speaker: "Tu", text: "Partiamo dall'onboarding: Giulia, a che punto siamo col design?" },
-      { start: 8.4, end: 16.2, speaker: "Interlocutore", text: "Il design è chiuso, mancano solo i testi. Le animazioni le possiamo fare dopo." },
-      { start: 17.0, end: 24.5, speaker: "Tu", text: "Allora rilasciamo martedì prossimo anche senza animazioni. Il crash su Android invece?" },
-      { start: 25.1, end: 33.9, speaker: "Interlocutore", text: "Lo sistemo io entro domani, è un problema con i permessi delle notifiche." },
-      { start: 34.6, end: 40.2, speaker: "Tu", text: "Perfetto. Io preparo la demo per Marco di giovedì." },
+      { start: 2.1, end: 7.8, speaker: "Tu", text: "Let's start with onboarding: Julia, where are we with the design?" },
+      { start: 8.4, end: 16.2, speaker: "Interlocutore", text: "The design is done, only the copy is missing. We can do the animations later." },
+      { start: 17.0, end: 24.5, speaker: "Tu", text: "Then we ship next Tuesday even without animations. What about the Android crash?" },
+      { start: 25.1, end: 33.9, speaker: "Interlocutore", text: "I'll fix it by tomorrow, it's a problem with notification permissions." },
+      { start: 34.6, end: 40.2, speaker: "Tu", text: "Perfect. I'll prepare the demo for Mark on Thursday." },
     ],
     actions: [
-      ["Sistemare il crash su Android 14 (permessi notifiche)", "Sara", day(1)],
-      ["Preparare la demo per Marco", "Tu", day(2)],
-      ["Scrivere i testi dell'onboarding", null, null],
+      ["Fix the Android 14 crash (notification permissions)", "Sarah", day(1)],
+      ["Prepare the demo for Mark", "Tu", day(2)],
+      ["Write the onboarding copy", null, null],
     ],
-    decisions: [["Rilascio dell'onboarding martedì, anche senza animazioni", null]],
+    decisions: [["Ship the onboarding on Tuesday, even without animations", null]],
     commitments: [
-      ["Sara", null, "sistemare il crash su Android entro domani", day(1)],
-      ["Tu", "Marco", "preparare la demo di giovedì", day(2)],
+      ["Sarah", null, "fix the Android crash by tomorrow", day(1)],
+      ["Tu", "Mark", "prepare the Thursday demo", day(2)],
     ],
-    entities: [["person", "Giulia Ferri"], ["person", "Sara Conti"], ["project", "Onboarding"], ["person", "Marco Bellini"]],
-    categories: ["Prodotto"],
+    entities: [["person", "Julia Ferris"], ["person", "Sarah Collins"], ["project", "Onboarding"], ["person", "Mark Bennett"]],
+    categories: ["Product"],
   },
   {
     id: "c-pricing",
-    title: "Pricing del piano annuale",
+    title: "Annual plan pricing",
     started: at(1, 15, 0),
-    people: ["Sara Conti"],
-    summary: `## Di cosa si è parlato
-- Il prezzo del piano annuale: tra **39 €** e **49 €**.
-- Il test A/B sul paywall.
+    people: ["Sarah Collins"],
+    summary: `## What was discussed
+- The price of the annual plan: between **$39** and **$49**.
+- The A/B test on the paywall.
 
-## Decisioni
-- Si parte con **39 € l'anno** e un test A/B a 49 € sul 20% degli utenti.`,
+## Decisions
+- Start at **$39 a year** and run an A/B test at $49 on 20% of users.`,
     actions: [
-      ["Impostare il test A/B del paywall su RevenueCat", "Tu", day(-2)],
-      ["Mandare i numeri di conversione del mese", "Sara", day(-1)],
+      ["Set up the paywall A/B test on RevenueCat", "Tu", day(-2)],
+      ["Send this month's conversion numbers", "Sarah", day(-1)],
     ],
-    decisions: [["Piano annuale a 39 €, test A/B a 49 € sul 20%", "39 €, 49 €, 20%"]],
-    commitments: [["Sara", "Tu", "mandare i numeri di conversione del mese", day(-1)]],
-    entities: [["person", "Sara Conti"], ["project", "Paywall"]],
-    categories: ["Prodotto", "Business"],
+    decisions: [["Annual plan at $39, A/B test at $49 on 20%", "$39, $49, 20%"]],
+    commitments: [["Sarah", "Tu", "send this month's conversion numbers", day(-1)]],
+    entities: [["person", "Sarah Collins"], ["project", "Paywall"]],
+    categories: ["Product", "Business"],
   },
   {
     id: "c-kickoff",
-    title: "Kickoff redesign con Marco",
+    title: "Redesign kickoff with Mark",
     started: at(3, 11, 0),
-    people: ["Marco Bellini", "Giulia Ferri"],
-    summary: `## Di cosa si è parlato
-- Marco vuole un'app **più semplice**: tre schermate invece di sette.
-- Budget confermato: **18.000 €** per il redesign.
+    people: ["Mark Bennett", "Julia Ferris"],
+    summary: `## What was discussed
+- Mark wants a **simpler** app: three screens instead of seven.
+- Budget confirmed: **$18,000** for the redesign.
 
-## Decisioni
-- Prima consegna dei mockup il **15 del mese**.`,
+## Decisions
+- First delivery of the mockups on the **15th of the month**.`,
     actions: [
-      ["Mandare a Marco il preventivo firmato", "Tu", day(-3)],
-      ["Condividere i mockup in Figma", "Giulia", day(6)],
+      ["Send Mark the signed quote", "Tu", day(-3)],
+      ["Share the mockups in Figma", "Julia", day(6)],
     ],
-    decisions: [["Budget del redesign: 18.000 €", "18.000 €"]],
+    decisions: [["Redesign budget: $18,000", "$18,000"]],
     commitments: [
-      ["Marco", "Tu", "mandare i contenuti delle tre schermate", day(4)],
-      ["Tu", "Marco", "mandare il preventivo firmato", day(-3)],
+      ["Mark", "Tu", "send the content for the three screens", day(4)],
+      ["Tu", "Mark", "send the signed quote", day(-3)],
     ],
-    entities: [["person", "Marco Bellini"], ["person", "Giulia Ferri"], ["project", "Redesign Nuvola"]],
-    categories: ["Clienti"],
+    entities: [["person", "Mark Bennett"], ["person", "Julia Ferris"], ["project", "Cloudly redesign"]],
+    categories: ["Clients"],
   },
   {
     id: "c-seed",
-    title: "Round seed con Davide",
+    title: "Seed round with David",
     started: at(9, 18, 0),
     sensitive: true,
-    people: ["Davide Russo"],
-    summary: `## Di cosa si è parlato
-- Le condizioni del round: valutazione e quote.
+    people: ["David Ross"],
+    summary: `## What was discussed
+- The terms of the round: valuation and shares.
 
-## Aperto
-- Serve il parere dell'avvocato prima di rispondere.`,
-    actions: [["Sentire l'avvocato sul term sheet", "Tu", day(5)]],
-    entities: [["person", "Davide Russo"]],
+## Open
+- We need the lawyer's opinion before answering.`,
+    actions: [["Talk to the lawyer about the term sheet", "Tu", day(5)]],
+    entities: [["person", "David Ross"]],
     categories: ["Business"],
   },
   {
     id: "c-raw",
-    title: "Intervista utente #4",
+    title: "User interview #4",
     started: at(2, 17, 30),
-    people: ["Elena"],
+    people: ["Emma"],
     transcript:
-      "Tu: Come usi l'app durante la settimana?\nElena: Soprattutto la sera, per pianificare il giorno dopo. Il promemoria del mattino lo trovo troppo presto.",
+      "Tu: How do you use the app during the week?\nEmma: Mostly in the evening, to plan the next day. I find the morning reminder too early.",
   },
-  { id: "c-rec", title: "Registrazione di oggi 11:02", started: at(0, 11, 2), status: "transcribing", people: [] },
+  { id: "c-rec", title: "Recording of today 11:02", started: at(0, 11, 2), status: "transcribing", people: [] },
 ];
 
 export function fixtureSql(): string {
@@ -152,7 +152,7 @@ export function fixtureSql(): string {
   for (const c of CALLS) {
     out.push(
       `INSERT INTO session (id, title, kind, status, folder_path, language, started_at, ended_at, metadata_json, sensitive, created_at, updated_at)
-       VALUES (${q(c.id)}, ${q(c.title)}, 'meeting', ${q(c.status ?? "done")}, '/', 'it', ${q(c.started)}, ${q(c.started)}, '{}', ${c.sensitive ? 1 : 0}, ${q(c.started)}, ${q(c.started)});`,
+       VALUES (${q(c.id)}, ${q(c.title)}, 'meeting', ${q(c.status ?? "done")}, '/', 'en', ${q(c.started)}, ${q(c.started)}, '{}', ${c.sensitive ? 1 : 0}, ${q(c.started)}, ${q(c.started)});`,
     );
     for (const p of c.people) {
       out.push(`INSERT INTO session_participant (id, session_id, display_name) VALUES (${q(uid("p"))}, ${q(c.id)}, ${q(p)});`);
@@ -211,33 +211,33 @@ export function fixtureSql(): string {
 
   out.push(
     `INSERT INTO memory (id, subject_type, subject_id, content, kind, confidence, status, source_session_id, created_at, updated_at)
-     VALUES ('m1', 'person', 'Marco Bellini', 'Marco preferisce ricevere i materiali il lunedì mattina', 'preference', 0.8, 'active', 'c-kickoff', ${q(at(3, 11))}, ${q(at(3, 11))});`,
+     VALUES ('m1', 'person', 'Mark Bennett', 'Mark prefers to receive materials on Monday morning', 'preference', 0.8, 'active', 'c-kickoff', ${q(at(3, 11))}, ${q(at(3, 11))});`,
     `INSERT INTO memory_link (memory_id, session_id) VALUES ('m1', 'c-kickoff');`,
     `INSERT INTO companion_todo (id, text, assignee, status, due_at, created_at, updated_at)
-     VALUES ('mt1', 'Rinnovare il dominio nuvola.app', 'Tu', 'open', ${q(day(0))}, ${q(at(1, 9))}, ${q(at(1, 9))});`,
-    // Timestamps for "ore ascoltate".
+     VALUES ('mt1', 'Renew the cloudly.app domain', 'Tu', 'open', ${q(day(0))}, ${q(at(1, 9))}, ${q(at(1, 9))});`,
+    // Timestamps for "hours listened".
     `INSERT INTO transcript_chunk (id, session_id, idx, start_sec, end_sec, speaker, text, created_at)
      VALUES ('ch1', 'c-sync', 0, 0, 2460, 'misto', 'onboarding crash android demo marco', ${q(at(0, 10))}),
             ('ch2', 'c-pricing', 0, 0, 1980, 'misto', 'piano annuale 39 euro test ab paywall', ${q(at(1, 16))}),
             ('ch3', 'c-kickoff', 0, 0, 3120, 'misto', 'redesign tre schermate budget 18000', ${q(at(3, 12))});`,
     // A provider, so the page shows a configured Mori (?fresh=1 skips all this).
     `INSERT INTO app_setting (key, value) VALUES ('provider', '{"baseUrl":"https://api.groq.com/openai/v1","apiKey":"gsk_preview","model":"openai/gpt-oss-120b"}');`,
-    `INSERT INTO app_setting (key, value) VALUES ('companion_my_names', 'Tu, te, io, me, Luca');`,
+    `INSERT INTO app_setting (key, value) VALUES ('companion_my_names', 'Tu, te, io, me, Alex');`,
   );
 
   // A conversation that already happened, with a markdown answer and citations.
   const t0 = at(0, 9, 50);
   const sources = [
-    { id: "c-pricing", title: "Pricing del piano annuale", date: "ieri", start: null },
-    { id: "c-sync", title: "Sync settimanale prodotto", date: "oggi", start: 17 },
+    { id: "c-pricing", title: "Annual plan pricing", date: "yesterday", start: null },
+    { id: "c-sync", title: "Weekly product sync", date: "today", start: 17 },
   ];
   out.push(
-    `INSERT INTO chat_thread (id, title, created_at, updated_at) VALUES ('th1', 'Cosa devo fare questa settimana?', ${q(t0)}, ${q(t0)});`,
+    `INSERT INTO chat_thread (id, title, created_at, updated_at) VALUES ('th1', 'What do I need to do this week?', ${q(t0)}, ${q(t0)});`,
     `INSERT INTO chat_message (id, thread_id, role, content, sources_json, is_error, created_at)
-     VALUES ('cm1', 'th1', 'user', 'Cosa devo fare questa settimana?', NULL, 0, ${q(t0)});`,
+     VALUES ('cm1', 'th1', 'user', 'What do I need to do this week?', NULL, 0, ${q(t0)});`,
     `INSERT INTO chat_message (id, thread_id, role, content, sources_json, is_error, created_at)
      VALUES ('cm2', 'th1', 'assistant', ${q(
-       `Questa settimana hai tre cose tue, una già **in ritardo**:\n\n- **Impostare il test A/B del paywall** su RevenueCat — era per due giorni fa [Pricing del piano annuale — ieri]\n- **Preparare la demo per Marco** entro giovedì [Sync settimanale prodotto — oggi]\n- Rinnovare il dominio, che hai aggiunto tu: scade **oggi**.\n\nIn più aspetti da Sara i numeri di conversione del mese.`,
+       `You have three things of your own this week, one already **overdue**:\n\n- **Set up the paywall A/B test** on RevenueCat — it was due two days ago [Annual plan pricing — yesterday]\n- **Prepare the demo for Mark** by Thursday [Weekly product sync — today]\n- Renew the domain, which you added yourself: it expires **today**.\n\nYou are also waiting on Sarah for this month's conversion numbers.`,
      )}, ${q(JSON.stringify(sources))}, 0, ${q(t0)});`,
   );
 

@@ -1,0 +1,208 @@
+name: Release
+
+# docs/MACOS.md, M6: download and run. Builds what a person downloads: the
+# .dmg for Apple Silicon and the Windows installer, both carrying uv so the
+# first launch prepares its own Python. Run by hand it stops at the two
+# artifacts. Only a tag (v*) goes one step further and opens a DRAFT release
+# with the two files attached: publishing it stays a click made by a person.
+# Nothing is signed with a certificate (macOS: ad hoc), no secret is used.
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: bash
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build mori-sysaudio
+        run: bash native/mori-sysaudio/build.sh
+
+      - name: Fetch uv
+        run: bash native/uv/fetch.sh
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: app/src-tauri
+
+      - name: Build the .dmg
+        run: |
+          pnpm exec tauri build --config src-tauri/tauri.macos-app.conf.json --bundles app,dmg
+          DMG=$(ls "$PWD"/src-tauri/target/release/bundle/dmg/*.dmg | head -1)
+          echo "DMG=$DMG" >> "$GITHUB_ENV"
+          echo "## the file"
+          ls -l "$DMG"
+          shasum -a 256 "$DMG"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Mori-macos-apple-silicon
+          path: ${{ env.DMG }}
+          if-no-files-found: error
+          retention-days: 14
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Fetch uv
+        run: bash native/uv/fetch.sh
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: app/src-tauri
+
+      # The macOS helper is not part of this build: it is only named in
+      # tauri.macos-app.conf.json.
+      - name: Build the installer
+        run: |
+          pnpm exec tauri build --config src-tauri/tauri.windows-app.conf.json --bundles nsis
+          SETUP=$(ls "$PWD"/src-tauri/target/release/bundle/nsis/*-setup.exe | head -1)
+          echo "SETUP=$(cygpath -w "$SETUP")" >> "$GITHUB_ENV"
+          echo "## the file"
+          ls -l "$SETUP"
+          sha256sum "$SETUP"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Mori-windows-x64
+          path: ${{ env.SETUP }}
+          if-no-files-found: error
+          retention-days: 14
+
+      # The installer is run the way a double click would, without the
+      # questions (/S), and the installed Mori is opened. This machine has no
+      # ~/.mori: Mori has to prepare its own Python, as on a new PC.
+      - name: Install it, open it, first launch
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $out = Join-Path $env:RUNNER_TEMP 'results'
+          New-Item -ItemType Directory -Force $out | Out-Null
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          function Shot($name) {
+            try {
+              $b = [System.Windows.Forms.SystemInformation]::VirtualScreen
+              $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+              $g = [System.Drawing.Graphics]::FromImage($bmp)
+              $g.CopyFromScreen($b.Left, $b.Top, 0, 0, $bmp.Size)
+              $bmp.Save((Join-Path $out $name))
+              $g.Dispose(); $bmp.Dispose()
+            } catch { "screenshot $name failed: $_" }
+          }
+          if (Test-Path "$HOME\.mori") { throw "there is already a ~/.mori: this would prove nothing" }
+          "## install"
+          $p = Start-Process -FilePath $env:SETUP -ArgumentList '/S' -Wait -PassThru
+          "installer exit code: $($p.ExitCode)"
+          if ($p.ExitCode -ne 0) { throw "the installer failed" }
+          $dir = Join-Path $env:LOCALAPPDATA 'Mori'
+          Get-ChildItem $dir | Select-Object Name, Length | Format-Table -AutoSize | Out-String | Tee-Object (Join-Path $out 'installed.txt')
+          $exe = Join-Path $dir 'mori.exe'
+          if (-not (Test-Path $exe)) { throw "mori.exe is not in $dir" }
+          if (-not (Test-Path (Join-Path $dir 'uv.exe'))) { throw "uv.exe is not in $dir" }
+          # The app looks for scripts next to its source folder first. On this
+          # machine that folder exists; hide it so the app can only use its own.
+          Rename-Item scripts scripts.checkout
+          "## open"
+          Start-Process -FilePath $exe
+          $py = "$HOME\.mori\venv\Scripts\python.exe"
+          $ready = $false
+          for ($i = 1; $i -le 150; $i++) {
+            Start-Sleep -Seconds 2
+            if ($i % 4 -eq 0 -and $i -le 60) { Shot ("setup_{0}.png" -f ($i / 4)) }
+            if ((Test-Path "$HOME\.mori\setup.log") -and (Select-String -Path "$HOME\.mori\setup.log" -Pattern '^## check' -Quiet) -and (Test-Path $py)) {
+              & $py -c "import soundcard, numpy, faster_whisper" 2>$null
+              if ($LASTEXITCODE -eq 0) { $ready = $true; break }
+            }
+          }
+          "## the running app"
+          Get-Process mori -ErrorAction SilentlyContinue | Select-Object Id, ProcessName, MainWindowTitle, Path | Format-List | Out-String | Tee-Object (Join-Path $out 'process.txt')
+          if (-not (Get-Process mori -ErrorAction SilentlyContinue)) { throw "Mori is not running" }
+          "## the setup log (~/.mori/setup.log)"
+          if (Test-Path "$HOME\.mori\setup.log") { Get-Content "$HOME\.mori\setup.log" | Tee-Object (Join-Path $out 'setup.log') }
+          Start-Sleep -Seconds 4
+          Shot 'setup_ready.png'
+          if (-not $ready) { throw "Mori did not prepare its Python" }
+          & $py -c "import sys, soundcard, numpy, faster_whisper; print('imports ok,', sys.version); print(sys.executable)"
+          Stop-Process -Name mori -Force -ErrorAction SilentlyContinue
+          Rename-Item scripts.checkout scripts
+          "the installed Mori opened and prepared its own Python"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-first-launch-results
+          path: ${{ runner.temp }}/results
+          retention-days: 14
+
+  # Only on a tag. A draft is visible to the maintainers only, until one of
+  # them publishes it.
+  draft:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [macos, windows]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: Mori-*
+          merge-multiple: true
+
+      - name: Open a draft release with the two files
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -l dist
+          gh release create "$GITHUB_REF_NAME" dist/* --draft --generate-notes --title "Mori $GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY"

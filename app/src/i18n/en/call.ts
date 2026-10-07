@@ -71,7 +71,7 @@ export default {
   "cambia": "change",
   "rifai la sintesi con il nome": "redo the summary with the name",
   "Chi è “{label}”?": "Who is “{label}”?",
-  "es. Giulia Ferri": "e.g. Giulia Ferri",
+  "es. Giulia Ferri": "e.g. Julia Ferris",
   "Nome di “{label}”": "Name of “{label}”",
   "Togli": "Remove",
   "Salva": "Save",
