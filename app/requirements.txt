@@ -8,3 +8,4 @@ faster-whisper>=1.2      # local Whisper transcription (transcribe*.py)
 soundcard>=0.4           # mic + system audio capture (record.py)
 numpy>=2.0               # audio buffers
 fastembed>=0.8           # local ONNX text embeddings for recall (embed.py); no torch
+av>=11,<19               # audio decoding for faster-whisper and FLAC (toflac.py). av 19 dropped an argument faster-whisper 1.2.1 still passes: every transcription failed (seen in CI run 37653383301)
