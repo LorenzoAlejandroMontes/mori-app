@@ -1,0 +1,281 @@
+name: macOS app
+
+# docs/MACOS.md, M1: a Mac app comes out of CI. The job builds Mori.app and a
+# .dmg for Apple Silicon, checks what is inside, then records a known sentence
+# with the recorder that lives INSIDE the app taken from the .dmg.
+# The app is signed ad hoc: no certificate, no secret.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: macos-app-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dmg:
+    runs-on: macos-latest
+    timeout-minutes: 50
+    defaults:
+      run:
+        # bash here means "bash -eo pipefail": a failed check behind a pipe fails the step.
+        shell: bash
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Results folder
+        run: |
+          mkdir -p "$RUNNER_TEMP/results"
+          echo "R=$RUNNER_TEMP/results" >> "$GITHUB_ENV"
+
+      # Tauri bundles the helper as an external binary: it has to exist first.
+      - name: Build mori-sysaudio
+        run: |
+          bash native/mori-sysaudio/build.sh
+          ls -l native/mori-sysaudio/build
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: app/src-tauri
+
+      - name: Build Mori.app and the .dmg
+        run: |
+          pnpm exec tauri build --config src-tauri/tauri.macos-app.conf.json --bundles app,dmg
+          B="$PWD/src-tauri/target/release/bundle"
+          ls -l "$B/macos" "$B/dmg"
+          DMG=$(ls "$B"/dmg/*.dmg | head -1)
+          echo "BUILT_APP=$B/macos/Mori.app" >> "$GITHUB_ENV"
+          echo "DMG=$DMG" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Mori-macos-apple-silicon-dmg
+          path: ${{ env.DMG }}
+          if-no-files-found: error
+          retention-days: 14
+
+      # From here on, everything looks at the app a user would get: the one
+      # copied out of the .dmg, not the build folder.
+      - name: Take the app out of the .dmg
+        run: |
+          hdiutil attach -nobrowse -readonly -mountpoint "$RUNNER_TEMP/dmg" "$DMG"
+          ls -la "$RUNNER_TEMP/dmg"
+          mkdir -p "$RUNNER_TEMP/installed"
+          ditto "$RUNNER_TEMP/dmg/Mori.app" "$RUNNER_TEMP/installed/Mori.app"
+          hdiutil detach "$RUNNER_TEMP/dmg"
+          echo "APP=$RUNNER_TEMP/installed/Mori.app" >> "$GITHUB_ENV"
+
+      - name: What is inside Mori.app
+        run: |
+          {
+            echo "## files"
+            (cd "$APP" && find . -not -name "*.png" | sort)
+            echo "## Info.plist"
+            plutil -lint "$APP/Contents/Info.plist"
+            plutil -p "$APP/Contents/Info.plist"
+          } | tee "$R/bundle.txt"
+          PB=/usr/libexec/PlistBuddy
+          echo "## the checks"
+          test -x "$APP/Contents/MacOS/mori-sysaudio"
+          file "$APP/Contents/MacOS/mori-sysaudio" | grep arm64
+          for f in record.py transcribe.py transcribe_cloud.py transcribe_diarized.py whisper_common.py progress_file.py embed.py toflac.py; do
+            test -f "$APP/Contents/Resources/scripts/$f" || { echo "missing scripts/$f"; exit 1; }
+          done
+          cmp "$APP/Contents/Resources/scripts/record.py" scripts/record.py
+          cmp "$APP/Contents/Resources/requirements.txt" requirements.txt
+          MIC=$($PB -c "Print :NSMicrophoneUsageDescription" "$APP/Contents/Info.plist")
+          SYS=$($PB -c "Print :NSAudioCaptureUsageDescription" "$APP/Contents/Info.plist")
+          MIN=$($PB -c "Print :LSMinimumSystemVersion" "$APP/Contents/Info.plist")
+          ID=$($PB -c "Print :CFBundleIdentifier" "$APP/Contents/Info.plist")
+          echo "microphone: $MIC"; echo "audio capture: $SYS"; echo "minimum macOS: $MIN"; echo "identifier: $ID"
+          [ -n "$MIC" ] && [ -n "$SYS" ]
+          [ "$MIN" = "14.2" ]
+          [ "$ID" = "com.mori.app" ]
+          echo "## signature of the app"
+          codesign -dvv "$APP" 2>&1 | tee "$R/codesign_app.txt"
+          grep -q "^Signature=adhoc" "$R/codesign_app.txt"
+          echo "## signature of the helper inside it"
+          codesign -dvv "$APP/Contents/MacOS/mori-sysaudio" 2>&1 | tee "$R/codesign_helper.txt"
+          grep -q "^Signature=adhoc" "$R/codesign_helper.txt"
+          echo "## deep verification"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          echo "all bundle checks passed"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # ~/.mori/venv is where the app looks for its Python. It is filled from
+      # the requirements.txt that travels inside the app.
+      - name: Python environment in ~/.mori/venv
+        run: |
+          mkdir -p "$HOME/.mori"
+          python -m venv "$HOME/.mori/venv"
+          "$HOME/.mori/venv/bin/pip" install --quiet -r "$APP/Contents/Resources/requirements.txt"
+          "$HOME/.mori/venv/bin/python" -c "import soundcard, numpy, faster_whisper; print('imports ok')"
+          echo "PY=$HOME/.mori/venv/bin/python" >> "$GITHUB_ENV"
+
+      - name: A sentence to play
+        run: |
+          say -o "$R/speech.aiff" "[[slnc 500]] Hello Sarah, the meeting moved to Thursday at three. Can you bring the slides?"
+          afconvert -f WAVE -d LEI16@16000 -c 1 "$R/speech.aiff" "$R/speech.wav"
+          osascript -e "set volume output volume 60" || true
+
+      # On a user's Mac these are the two system prompts ("Mori would like to
+      # use the microphone", "...to record this computer's audio"). A CI machine
+      # has nobody to click them, and an unanswered prompt blocks every later
+      # capture, so the answers are written where macOS keeps them BEFORE the
+      # first capture: for whoever launches things from this shell, for the
+      # helper by path, and for the app by its identifier.
+      - name: Allow the microphone and system audio recording
+        run: |
+          BIN="$APP/Contents/MacOS/mori-sysaudio"
+          SQL="CREATE TEMP TABLE t AS SELECT * FROM access WHERE service IN ('kTCCServiceMicrophone','kTCCServiceScreenCapture') GROUP BY client;
+               UPDATE t SET service='kTCCServiceAudioCapture', auth_value=2;
+               INSERT OR REPLACE INTO access SELECT * FROM t;
+               CREATE TEMP TABLE b AS SELECT * FROM t WHERE client LIKE '/%' LIMIT 1;
+               UPDATE b SET client='$BIN', csreq=NULL;
+               INSERT OR REPLACE INTO access SELECT * FROM b;
+               UPDATE b SET client='com.mori.app', client_type=0;
+               INSERT OR REPLACE INTO access SELECT * FROM b;
+               UPDATE b SET service='kTCCServiceMicrophone';
+               INSERT OR REPLACE INTO access SELECT * FROM b;
+               SELECT service, client, client_type, auth_value FROM access ORDER BY service, client;"
+          echo "## system"; sudo sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" "$SQL" | tee "$R/tcc_system.txt"
+          echo "## user"; sqlite3 "$HOME/Library/Application Support/com.apple.TCC/TCC.db" "$SQL" | tee "$R/tcc_user.txt"
+
+      # The recorder and the helper are the ones inside the app. No environment
+      # variable tells record.py where the helper is: it has to find it.
+      - name: The recorder inside the app hears the other side
+        run: |
+          REC="$APP/Contents/Resources/scripts/record.py"
+          attempt() {
+            N=$1; OUT="$R/packaged_$N.wav"; STOP="$R/packaged_$N.stop"
+            (cd "$RUNNER_TEMP" && env -u MORI_SYSAUDIO "$PY" "$REC" "$OUT" "$STOP" 60 > "$R/packaged_$N.out" 2> "$R/packaged_$N.err") &
+            P=$!
+            for i in $(seq 1 100); do [ -f "$OUT.started" ] && break; sleep 0.2; done
+            [ -f "$OUT.started" ] || { echo "the recorder did not start"; cat "$R/packaged_$N.err"; return 1; }
+            sleep 2
+            echo "## the helper that is running"
+            pgrep -fl mori-sysaudio | tee "$R/packaged_helper_$N.txt" || true
+            afplay "$R/speech.wav"
+            sleep 2
+            touch "$STOP"
+            wait $P || echo "recorder exit code $?"
+            echo "## recorder said"; cat "$R/packaged_$N.out" "$R/packaged_$N.err"
+            grep -q "$APP/Contents/MacOS/mori-sysaudio" "$R/packaged_helper_$N.txt" || { echo "the helper inside the app was not the one running"; return 1; }
+            echo "## the others' channel"
+            "$PY" native/mori-sysaudio/ci_check.py "$OUT.sys.wav" meeting thursday slides | tee "$R/packaged_others.json"
+          }
+          if attempt 1; then exit 0; fi
+          echo "## first attempt failed: what macOS decided about the permission"
+          log show --last 2m --style compact --predicate 'subsystem == "com.apple.TCC"' 2>/dev/null | grep -i -E "AudioCapture|sysaudio" | tail -40 || true
+          echo "## restarting the permission daemon and trying once more"
+          sudo killall tccd || true
+          killall tccd || true
+          sleep 2
+          attempt 2
+
+      # The whole app, as a user would run it: opened from Finder's point of
+      # view, started and stopped with the global shortcut. This step reports;
+      # it does not decide whether the job is green (see docs/MACOS.md, M2-M4).
+      - name: The app itself, opened and driven with its shortcut
+        id: live
+        continue-on-error: true
+        run: |
+          # The app looks for scripts next to its source folder first. On this
+          # machine that folder exists; hide it so the app can only use its own.
+          mv scripts scripts.checkout
+          T=$(getconf DARWIN_USER_TEMP_DIR)
+          rm -f "$T"/mori_rec_* || true
+          open --stdout "$R/app.out" --stderr "$R/app.err" "$APP"
+          sleep 12
+          echo "## processes"; pgrep -fl "Mori.app" || { echo "the app is not running"; cat "$R/app.err" || true; exit 1; }
+          screencapture -x "$R/app_open.png"
+          echo "## windows"
+          osascript -e 'tell application "System Events" to get {name, position, size} of every window of process "mori"' 2>&1 || true
+          osascript -e 'tell application "System Events" to get name of every process whose background only is false' 2>&1 || true
+
+          echo "## shortcut: start"
+          osascript -e 'tell application "System Events" to key code 15 using {control down, shift down}' 2>&1 || echo "could not send the shortcut"
+          STARTED=""
+          for i in $(seq 1 150); do STARTED=$(ls "$T"/mori_rec_*.wav.started 2>/dev/null | head -1 || true); [ -n "$STARTED" ] && break; sleep 0.2; done
+          echo "## what the app said"; cat "$R/app.out" "$R/app.err" 2>/dev/null || true
+          ls -la "$T" | grep mori_rec || true
+          [ -n "$STARTED" ] || { echo "no recording started after the shortcut"; screencapture -x "$R/app_no_recording.png"; exit 1; }
+          WAV="${STARTED%.started}"
+          sleep 2
+          echo "## recorder and helper started by the app"
+          pgrep -fl "record.py" | tee "$R/live_recorder.txt" || true
+          pgrep -fl "mori-sysaudio" | tee "$R/live_helper.txt" || true
+          afplay "$R/speech.wav" &
+          A=$!
+          sleep 4
+          screencapture -x "$R/app_recording.png"
+          cat "$WAV.levels" 2>/dev/null | tee "$R/live_levels.json" || true
+          echo
+          wait $A
+          sleep 2
+          echo "## shortcut: stop"
+          osascript -e 'tell application "System Events" to key code 15 using {control down, shift down}' 2>&1 || echo "could not send the shortcut"
+          # The app deletes the channel files once the call is transcribed: copy
+          # the others' channel the moment the recorder says it is done.
+          for i in $(seq 1 300); do [ -f "$WAV.done" ] && break; sleep 0.1; done
+          cp "$WAV.sys.wav" "$R/live_others.wav" 2>/dev/null || true
+          cp "$WAV.mic.wav" "$R/live_you.wav" 2>/dev/null || true
+          [ -f "$R/live_others.wav" ] || { echo "the recording did not finish"; ls -la "$T" | grep mori_rec || true; cat "$T"/mori_rec_*.log 2>/dev/null || true; exit 1; }
+          sleep 3
+          screencapture -x "$R/app_after_stop.png"
+          cat "$T"/mori_rec_*.log 2>/dev/null || true
+          echo "## the others' channel, recorded by the running app"
+          "$PY" native/mori-sysaudio/ci_check.py "$R/live_others.wav" meeting thursday slides | tee "$R/live_others.json"
+          grep -q "$APP/Contents/Resources/scripts/record.py" "$R/live_recorder.txt" || { echo "the recorder was not the one inside the app"; exit 1; }
+          grep -q "$APP/Contents/MacOS/mori-sysaudio" "$R/live_helper.txt" || { echo "the helper was not the one inside the app"; exit 1; }
+          echo "the running app recorded the other side"
+
+      - name: After the live run
+        if: always()
+        run: |
+          echo "live step: ${{ steps.live.outcome }}" | tee "$R/live_outcome.txt"
+          [ -d scripts.checkout ] && mv scripts.checkout scripts || true
+          pkill -f "Mori.app/Contents/MacOS" || true
+          ls -la "$HOME/.mori" "$HOME/.mori/audio" 2>/dev/null || true
+          log show --last 8m --style compact --predicate 'subsystem == "com.apple.TCC"' 2>/dev/null | grep -i -E "AudioCapture|Microphone|sysaudio|com\.mori" | tail -80 > "$R/tcc_log.txt" || true
+          tail -30 "$R/tcc_log.txt" || true
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Mori.app from the .dmg"
+            echo "Live run of the app (shortcut, recording): **${{ steps.live.outcome }}**"
+            for f in packaged_others live_others; do
+              if [ -f "$R/$f.json" ]; then echo "**$f**"; echo '```json'; cat "$R/$f.json"; echo '```'; fi
+            done
+            if [ -f "$R/codesign_app.txt" ]; then echo '```'; cat "$R/codesign_app.txt"; echo '```'; fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-app-results
+          path: ${{ runner.temp }}/results
+          retention-days: 14

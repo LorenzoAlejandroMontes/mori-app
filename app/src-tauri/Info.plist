@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Mori records your voice so your side of the call is in the transcript.</string>
+	<key>NSAudioCaptureUsageDescription</key>
+	<string>Mori records the call's sound so the transcript shows what everyone else said.</string>
+</dict>
+</plist>
