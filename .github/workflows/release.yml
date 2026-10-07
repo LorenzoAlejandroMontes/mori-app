@@ -1,31 +1,54 @@
 name: Release
 
-# docs/MACOS.md, M6: download and run. Builds what a person downloads: the
-# .dmg for Apple Silicon and the Windows installer, both carrying uv so the
-# first launch prepares its own Python. Run by hand it stops at the two
-# artifacts. Only a tag (v*) goes one step further and opens a DRAFT release
-# with the two files attached: publishing it stays a click made by a person.
-# Nothing is signed with a certificate (macOS: ad hoc), no secret is used.
+# What a person downloads: the .dmg for Apple Silicon and the Windows
+# installer, both carrying uv so the first launch prepares its own Python.
+#
+# Run by hand it is a dry run: the Mac app is signed ad hoc, no secret is
+# used, and it stops at the two artifacts. Run by hand with `sign` ticked, or
+# by a tag (v*), the Mac app is signed with the Developer ID and notarized.
+# The private key is not here and never comes here: the job opens a signing
+# session and waits for the owner to join it from their own machine with
+# tools/release/sign-owner.sh (docs/RELEASING.md). Only a tag goes one step
+# further and opens a DRAFT release with the two files attached: publishing
+# it stays a click made by a person.
+#
+# Either way the Mac job then takes the app out of the .dmg it is about to
+# hand over and proves it: first launch, a call recorded with the shortcut,
+# the transcript, and a first launch from a quarantined download.
 on:
   workflow_dispatch:
+    inputs:
+      sign:
+        description: "Sign the Mac app with the Developer ID and notarize it (the owner has to run tools/release/sign-owner.sh)"
+        type: boolean
+        default: false
   push:
     tags: ["v*"]
 
 permissions:
   contents: read
 
+env:
+  SIGN: ${{ (github.event_name == 'push' || inputs.sign == true) && 'true' || 'false' }}
+
+# A dry run and a signed run of the same branch do not cancel each other.
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ github.ref }}-${{ (github.event_name == 'push' || inputs.sign == true) && 'signed' || 'dry' }}
   cancel-in-progress: true
 
 jobs:
   macos:
     runs-on: macos-latest
-    timeout-minutes: 40
+    # A signed run waits for a person twice (the app, then the .dmg) and for
+    # Apple twice.
+    timeout-minutes: 150
     defaults:
       run:
         shell: bash
         working-directory: app
+    env:
+      SIGNER: ${{ github.workspace }}/tools/release/mac/remote_sign.sh
+      RESULTS: ${{ runner.temp }}/mac-results
     steps:
       - uses: actions/checkout@v4
 
@@ -54,20 +77,161 @@ jobs:
         with:
           workspaces: app/src-tauri
 
-      - name: Build the .dmg
+      - name: Build the app and the .dmg (ad hoc)
         run: |
           pnpm exec tauri build --config src-tauri/tauri.macos-app.conf.json --bundles app,dmg
           DMG=$(ls "$PWD"/src-tauri/target/release/bundle/dmg/*.dmg | head -1)
           echo "DMG=$DMG" >> "$GITHUB_ENV"
-          echo "## the file"
+          echo "APP=$PWD/src-tauri/target/release/bundle/macos/Mori.app" >> "$GITHUB_ENV"
+          mkdir -p "$RESULTS"
           ls -l "$DMG"
-          shasum -a 256 "$DMG"
+
+      - name: rcodesign (pinned)
+        run: bash "$SIGNER" tool
+
+      # No key needed, so it runs every time: a copy of the app is signed with
+      # a certificate made on the spot, with the settings of the real
+      # signature, and every binary inside is checked.
+      - name: Signing rehearsal with a throwaway certificate
+        run: bash "$SIGNER" rehearse
+
+      - name: "Signed: open the signing session of the app"
+        if: env.SIGN == 'true'
+        run: bash "$SIGNER" start app
+
+      - uses: actions/upload-artifact@v4
+        if: env.SIGN == 'true'
+        with:
+          name: sjs-app
+          path: app/src-tauri/target/remote-sign/sjs-app.txt
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: "Signed: wait for the owner to sign the app"
+        if: env.SIGN == 'true'
+        run: |
+          bash "$SIGNER" wait app
+          # what Apple gets: an image with the signed app inside
+          hdiutil create -volname "Mori" -srcfolder "$APP" -ov -fs HFS+ -format UDZO "$RUNNER_TEMP/notarize-app.dmg"
+
+      - uses: actions/upload-artifact@v4
+        if: env.SIGN == 'true'
+        with:
+          name: notarize-app
+          path: ${{ runner.temp }}/notarize-app.dmg
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+
+      # The .dmg is built again from the signed app, which is copied into it
+      # as it is: nothing signs the app a second time.
+      - name: "Signed: staple the app, build the .dmg from it, open its signing session"
+        if: env.SIGN == 'true'
+        run: |
+          bash "$SIGNER" staple "$APP"
+          bash "$SIGNER" dmg
+          bash "$SIGNER" start dmg
+
+      - uses: actions/upload-artifact@v4
+        if: env.SIGN == 'true'
+        with:
+          name: sjs-dmg
+          path: app/src-tauri/target/remote-sign/sjs-dmg.txt
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: "Signed: wait for the owner to sign the .dmg"
+        if: env.SIGN == 'true'
+        run: bash "$SIGNER" wait dmg
+
+      - uses: actions/upload-artifact@v4
+        if: env.SIGN == 'true'
+        with:
+          name: notarize-dmg
+          path: ${{ env.DMG }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+
+      - name: "Signed: staple the .dmg, what macOS says about both"
+        if: env.SIGN == 'true'
+        run: |
+          bash "$SIGNER" staple "$DMG"
+          set +e
+          (
+            set -e
+            echo "## Gatekeeper on the app"
+            spctl -a -vv "$APP" 2>&1
+            echo "## Gatekeeper on the .dmg"
+            spctl -a -t open --context context:primary-signature -vv "$DMG" 2>&1
+            echo "## the tickets"
+            xcrun stapler validate "$APP"
+            xcrun stapler validate "$DMG"
+            echo "## the signatures"
+            codesign -dv --verbose=2 "$APP" 2>&1
+            codesign -dv --verbose=2 "$DMG" 2>&1
+          ) > "$RESULTS/signed.txt"
+          RC=$?
+          set -e
+          cat "$RESULTS/signed.txt"
+          if [ "$RC" != 0 ]; then echo "FAILED: macOS does not accept the signed files"; exit 1; fi
+
+      - name: The file
+        run: |
+          ls -l "$DMG"
+          shasum -a 256 "$DMG" | tee "$RESULTS/sha256.txt"
 
       - uses: actions/upload-artifact@v4
         with:
           name: Mori-macos-apple-silicon
           path: ${{ env.DMG }}
           if-no-files-found: error
+          retention-days: 14
+
+      # From here on nothing touches the build folder: the app that is proven
+      # is the one inside the file above.
+      - name: Take the app out of the .dmg
+        run: |
+          MNT="$RUNNER_TEMP/dmg-mount"
+          hdiutil attach -nobrowse -readonly -mountpoint "$MNT" "$DMG"
+          ls -la "$MNT"
+          mkdir -p "$RUNNER_TEMP/from-dmg"
+          ditto "$MNT/Mori.app" "$RUNNER_TEMP/from-dmg/Mori.app"
+          hdiutil detach "$MNT"
+          P="$RUNNER_TEMP/from-dmg/Mori.app"
+          echo "PROOF_APP=$P" >> "$GITHUB_ENV"
+          codesign --verify --deep --strict --verbose=2 "$P"
+          for b in mori mori-sysaudio uv; do codesign -dv --verbose=2 "$P/Contents/MacOS/$b" 2>&1 | grep -E '^(Identifier|CodeDirectory|Authority|TeamIdentifier|Signature|Timestamp)'; done
+          if [ "$SIGN" = true ]; then xcrun stapler validate "$P"; fi
+
+      - name: "Proof: first launch, a call recorded with the shortcut, the transcript"
+        timeout-minutes: 35
+        run: bash "$GITHUB_WORKSPACE/tools/release/mac/prove.sh" "$PROOF_APP" "$RESULTS"
+
+      - name: "Signed proof: first launch from a quarantined download"
+        if: env.SIGN == 'true'
+        timeout-minutes: 12
+        run: |
+          bash "$GITHUB_WORKSPACE/tools/release/mac/first-launch.sh" "$DMG" "$RESULTS" open > "$RESULTS/gatekeeper.log" 2>&1 && RC=0 || RC=$?
+          cat "$RESULTS/gatekeeper.log"
+          exit $RC
+
+      # An ad hoc app is refused by Gatekeeper: this only records what a
+      # person would see, and keeps the script exercised between releases.
+      - name: "Dry run: what a quarantined download of the ad hoc app shows"
+        if: env.SIGN != 'true'
+        continue-on-error: true
+        timeout-minutes: 12
+        run: |
+          bash "$GITHUB_WORKSPACE/tools/release/mac/first-launch.sh" "$DMG" "$RESULTS" blocked > "$RESULTS/gatekeeper.log" 2>&1 && RC=0 || RC=$?
+          cat "$RESULTS/gatekeeper.log"
+          exit $RC
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-release-proof
+          path: ${{ runner.temp }}/mac-results
           retention-days: 14
 
   windows:

@@ -4,3 +4,8 @@
 # non converte gli a-capo: ogni checkout ha gli stessi byte del commit.
 # 0001-0004 sono LF, da 0005 in poi CRLF: cosi' li ricordano i database esistenti.
 app/src-tauri/migrations/*.sql -text
+
+# Shell scripts run under bash on every machine, Git Bash on Windows included:
+# a CRLF checkout breaks them.
+*.sh text eol=lf
+*.pem text eol=lf
