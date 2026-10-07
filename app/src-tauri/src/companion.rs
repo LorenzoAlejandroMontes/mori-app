@@ -696,6 +696,15 @@ pub async fn companion_show_main(app: AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn companion_quit(app: AppHandle) -> Result<(), String> {
+    // Tauri's own exit has been seen to never return on macOS: the main
+    // thread waiting inside a plugin's exit handler (process sample in CI run
+    // 37657007810), the window still open a minute after Cmd+Q. The frontend
+    // calls this only once the call is saved, so after a moment the process
+    // ends anyway.
+    std::thread::spawn(|| {
+        std::thread::sleep(std::time::Duration::from_secs(3));
+        std::process::exit(0);
+    });
     app.exit(0);
     Ok(())
 }
