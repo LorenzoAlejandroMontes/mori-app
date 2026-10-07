@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Python virtualenv (recreate with requirements)
+app/.venv/
+**/__pycache__/
+*.pyc
+
+# Rust / Tauri build output
+app/src-tauri/target/
+**/target/
+
+# Frontend build output
+app/dist/
+dist/
+
+# Local Claude Code tooling & state (not product code)
+.claude/
+
+# Logs & OS cruft
+*.log
+.DS_Store
+Thumbs.db
+
+# Env / secrets (Mori stores the provider key in the local DB, not in the repo)
+.env
+.env.*
+*.local

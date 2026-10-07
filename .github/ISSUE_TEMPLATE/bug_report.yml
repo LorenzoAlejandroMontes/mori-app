@@ -1,0 +1,50 @@
+name: Bug report
+description: Something does not work the way it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. Please do not paste real transcripts, names or API keys: invented text is enough to reproduce.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you got.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Record a call with ...
+        2. Press ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Mori version or commit
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: Windows 11 24H2
+    validations:
+      required: true
+  - type: dropdown
+    id: stt
+    attributes:
+      label: Transcription
+      options:
+        - Hosted Whisper (Groq)
+        - Local Whisper
+        - Not related to transcription
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error text or screenshot
+      description: The message Mori showed, if any.

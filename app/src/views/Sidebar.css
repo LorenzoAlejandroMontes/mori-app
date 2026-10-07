@@ -1,0 +1,234 @@
+/* ── Barra laterale (docs/DESIGN.md §2) ─────────────────────────────────
+   The rail sits on the paper of the window, without a border: the sheet
+   beside it is what has edges. Destinations look like destinations: an icon
+   and a name; the one you are in is lifted on a white tab. Color only where
+   it means something: the red dot of the recorder, the teal of where you are,
+   and the live capsule — dark, always — while Mori is listening. */
+
+.sidebar {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  min-height: 0;
+  padding: var(--s-2) var(--s-2) var(--s-2) var(--s-3);
+  background: transparent;
+  overflow: hidden;
+}
+
+.sb-head { display: flex; align-items: center; gap: 2px; padding: 4px 0 var(--s-3); }
+.sb-brand {
+  flex: 1 1 auto; min-width: 0; display: flex; align-items: center;
+  height: 36px; padding: 0 var(--s-2); border: none; border-radius: var(--r-md);
+  background: transparent; color: var(--text); cursor: pointer; text-align: left;
+  transition: background var(--dur-1);
+}
+.sb-brand:hover { background: var(--hover); }
+.sb-brand .mori-brand { font-size: 21px; }
+.sb-head .icon-btn { color: var(--muted); }
+
+/* "Cerca o chiedi": it opens ⌘K, so it looks like a field but is a button. */
+.sb-search {
+  display: flex; align-items: center; gap: var(--s-2); height: 34px; padding: 0 var(--s-2) 0 10px;
+  border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--panel);
+  color: var(--muted); font: var(--t-small); cursor: pointer; text-align: left;
+  box-shadow: 0 1px 1px rgba(28, 24, 18, 0.03);
+  transition: border-color var(--dur-1), color var(--dur-1), box-shadow var(--dur-1);
+}
+.sb-search > span:first-of-type { flex: 1; }
+.sb-search:hover { border-color: var(--line-strong); color: var(--ink-soft); }
+
+/* ── The recording control ─────────────────────────────────────────── */
+/* The one action that matters most, in the one dark shape of the app: the
+   capsule. Idle it waits with a red dot; live it glows and the two voices run
+   across it. Same place, same shape, every state. */
+.rec-ctl { margin: var(--s-2) 0 var(--s-4); }
+.rec-main {
+  display: flex; align-items: center; gap: 10px; width: 100%; height: 44px; padding: 0 12px 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 14px; background: var(--live-bg);
+  color: var(--live-fg); font: 600 14px/1 var(--font-ui); text-align: left;
+  box-shadow: var(--shadow-2);
+}
+button.rec-main { cursor: pointer; transition: box-shadow var(--dur-2), transform var(--dur-2) var(--ease-spring); }
+button.rec-main:hover { box-shadow: var(--shadow-2), 0 0 0 4px var(--record-soft); transform: translateY(-1px); }
+button.rec-main:hover .rec-dot { transform: scale(1.2); }
+button.rec-main:active { transform: scale(0.985); }
+.rec-main .rec-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* A label that clips (for the "…") needs a line as tall as the font: at /1 the
+   tails of g, p, q are cut — "Registra", "Oggi" (preview/clip.mjs checks it). */
+.rec-label, .nav-label, .recent-title { line-height: 1.4; }
+.rec-key { font-size: 11px; color: var(--live-muted); letter-spacing: 0.04em; }
+.rec-ctl.starting .rec-main, .rec-ctl.saving .rec-main { font-weight: 500; }
+.rec-ctl .spinner { border-color: rgba(255, 255, 255, 0.18); border-top-color: #2dd4bf; }
+.rec-ctl .rec-dot {
+  flex: 0 0 auto; width: 10px; height: 10px; border-radius: 50%; background: #ff5f64;
+  box-shadow: 0 0 0 3px rgba(255, 95, 100, 0.2); transition: transform var(--dur-2) var(--ease-spring);
+}
+.rec-ctl .rec-dot.live { background: #ff5f64; box-shadow: 0 0 0 3px rgba(255, 95, 100, 0.22); animation: rec-pulse 1.4s ease-in-out infinite; }
+@keyframes rec-pulse { 0%, 100% { opacity: 1; box-shadow: 0 0 0 3px rgba(255, 95, 100, 0.22); } 50% { opacity: 0.55; box-shadow: 0 0 0 6px rgba(255, 95, 100, 0.08); } }
+
+/* Live: the capsule goes dark, in both themes. One look says "Mori is
+   listening", and the two voices run across it. */
+.rec-live {
+  position: relative; display: flex; flex-direction: column; gap: var(--s-2); padding: 11px 10px 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 14px;
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(20, 184, 166, 0.16), transparent 55%),
+    radial-gradient(120% 90% at 100% 100%, rgba(139, 92, 246, 0.16), transparent 55%),
+    var(--live-bg);
+  color: var(--live-fg); box-shadow: var(--shadow-2);
+  animation: rec-in var(--dur-4) var(--ease-spring);
+}
+@keyframes rec-in { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }
+.rec-live-top { display: flex; align-items: center; gap: 9px; font: 600 13.5px/1 var(--font-ui); color: var(--live-fg); }
+.rec-live-top .rec-label { flex: 1; }
+.rec-time { font-size: 13px; font-weight: 500; color: var(--live-fg); letter-spacing: 0.02em; }
+.rec-live-bottom { display: flex; align-items: center; gap: var(--s-2); }
+.voices-wave { flex: 1 1 auto; min-width: 0; display: block; }
+.rec-stop {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px;
+  border: none; border-radius: var(--r-md); background: var(--record-fill); color: var(--on-fill);
+  font: 700 12.5px/1 var(--font-ui); cursor: pointer; transition: background var(--dur-1), transform var(--dur-1);
+}
+.rec-stop:hover { background: var(--record-fill-hover); }
+.rec-stop:active { transform: scale(0.96); }
+/* A side has gone dead: amber on the dark capsule, the fix in one line. */
+.rec-warn {
+  display: flex; align-items: flex-start; gap: 8px; padding-top: var(--s-2);
+  border-top: 1px solid rgba(255, 255, 255, 0.1); color: #fbbf24;
+  animation: rec-in var(--dur-3) var(--ease-out);
+}
+.rec-warn svg { flex: 0 0 auto; margin-top: 2px; }
+.rec-warn > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rec-warn b { font: 600 12.5px/1.35 var(--font-ui); color: #fcd34d; }
+.rec-warn-hint { font: 400 12px/1.4 var(--font-ui); color: rgba(255, 255, 255, 0.72); }
+
+/* "Sembra finita" — the countdown, below the wave. */
+.silence {
+  display: flex; flex-direction: column; gap: var(--s-2); padding-top: var(--s-2);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  animation: rec-in var(--dur-3) var(--ease-out);
+}
+.silence-msg { margin: 0; font: var(--t-small); color: inherit; }
+.silence-msg b { color: #ff8a8e; font-weight: 600; }
+.silence-bar { height: 3px; border-radius: 3px; background: rgba(255, 255, 255, 0.14); overflow: hidden; }
+.silence-bar span {
+  display: block; height: 100%; background: #ff5f64; transform-origin: left;
+  transition: transform 1s linear;
+}
+.silence-acts { display: flex; gap: 6px; }
+.silence-acts .btn { flex: 1; }
+.rec-live .silence-acts .btn:not(.primary) { background: rgba(255, 255, 255, 0.1); border-color: transparent; color: var(--live-fg); }
+.rec-live .silence-acts .btn:not(.primary):hover { background: rgba(255, 255, 255, 0.16); }
+/* The same countdown in a toast (sidebar collapsed) keeps the page's colors. */
+.toast-extra .silence { border-top: none; padding-top: 0; color: var(--text); }
+.toast-extra .silence-msg b { color: var(--record); }
+.toast-extra .silence-bar { background: var(--panel-2); }
+.toast-extra .silence-bar span { background: var(--record-fill); }
+
+.rec-error {
+  margin-top: 6px; padding: 6px 8px; border-radius: var(--r-md); background: var(--record-soft);
+  color: var(--record); font: var(--t-meta); overflow-wrap: anywhere;
+}
+
+/* ── The transcription in progress, under the recorder ────────────────
+   Paper, not the dark capsule: the capsule is "Mori is listening", this is
+   work going on in the background. A line that fills, and the time left. */
+.rec-ctl + .tr-strip { margin-top: calc(-1 * var(--s-2)); }
+.tr-strip {
+  display: flex; flex-direction: column; gap: 7px; width: 100%; margin: 0 0 var(--s-4); padding: 10px 12px 9px;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--text);
+  text-align: left; cursor: pointer; box-shadow: 0 1px 2px rgba(28, 24, 18, 0.05);
+  animation: rec-in var(--dur-3) var(--ease-out);
+  transition: border-color var(--dur-1), box-shadow var(--dur-1);
+}
+.tr-strip:hover { border-color: var(--line-strong); box-shadow: 0 2px 6px rgba(28, 24, 18, 0.08); }
+.tr-strip-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.tr-strip-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 12.5px/1.4 var(--font-ui); color: var(--ink-soft); }
+.tr-strip-title b { font-weight: 650; color: var(--text); }
+.tr-strip-meta { display: flex; align-items: baseline; gap: 8px; font: var(--t-meta); color: var(--muted); }
+.tr-strip-line {
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-variant-numeric: tabular-nums; line-height: 1.4;
+}
+.tr-strip-q { flex: 0 0 auto; }
+
+/* ── Sections ─────────────────────────────────────────────────────── */
+.sb-nav { display: flex; flex-direction: column; gap: 2px; }
+.nav-item {
+  position: relative; display: flex; align-items: center; gap: 11px; width: 100%; height: 36px; padding: 0 11px;
+  border: 1px solid transparent; border-radius: var(--r-md); background: transparent; color: var(--ink-soft);
+  font: 500 14px/1 var(--font-ui); text-align: left; cursor: pointer;
+  transition: background var(--dur-1), color var(--dur-1), box-shadow var(--dur-1), border-color var(--dur-1);
+}
+.nav-item svg { flex: 0 0 auto; color: var(--muted); transition: color var(--dur-1), transform var(--dur-2) var(--ease-spring); }
+.nav-item:hover { background: var(--hover-strong); color: var(--text); }
+.nav-item:hover svg { color: var(--ink-soft); }
+.nav-item:active svg { transform: scale(0.9); }
+.nav-item[aria-current="page"] {
+  background: var(--panel); border-color: var(--line); color: var(--text); font-weight: 600;
+  box-shadow: 0 1px 2px rgba(28, 24, 18, 0.06);
+}
+.nav-item[aria-current="page"] svg { color: var(--accent); }
+.nav-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nav-count { font: 500 11.5px/1 var(--font-mono); color: var(--muted); }
+.nav-item[aria-current="page"] .nav-count { color: var(--accent); }
+
+/* ── Recenti ──────────────────────────────────────────────────────── */
+.sb-recent { display: flex; flex-direction: column; gap: 1px; margin-top: var(--s-5); min-height: 0; overflow-y: auto; }
+.sb-label {
+  margin: 0 0 var(--s-1); padding: 0 10px; font: var(--t-label); text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--muted);
+}
+.recent-item {
+  display: flex; align-items: center; gap: var(--s-2); width: 100%; min-height: 30px; padding: 0 10px;
+  border: none; border-radius: var(--r-md); background: transparent; color: var(--ink-soft);
+  font: 400 13px/1.4 var(--font-ui); text-align: left; cursor: pointer;
+  transition: background var(--dur-1), color var(--dur-1);
+}
+.recent-item:hover { background: var(--hover-strong); color: var(--text); }
+.recent-item[aria-current="page"] { background: var(--panel); box-shadow: 0 0 0 1px var(--line); color: var(--text); font-weight: 600; }
+.recent-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent-state { flex: 0 0 auto; display: inline-flex; color: var(--muted); }
+.recent-state.ko { color: var(--record); }
+.recent-state.priv { color: var(--accent-2); }
+
+.sb-foot {
+  display: flex; align-items: center; gap: var(--s-1); margin-top: auto; padding-top: var(--s-2);
+}
+.sb-foot .nav-item { flex: 1; }
+
+/* Drag handle on the right edge. */
+.sidebar-resize {
+  position: absolute; top: 0; right: -3px; width: 6px; height: 100%; cursor: col-resize; z-index: 5;
+}
+.sidebar-resize:hover { background: linear-gradient(90deg, transparent, var(--accent-soft)); }
+
+/* ── Rail (collapsed) ─────────────────────────────────────────────── */
+.mini-rail {
+  flex: 0 0 auto; width: 58px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: var(--s-2) 0; background: transparent;
+}
+.mini-btn {
+  position: relative; display: inline-grid; place-items: center; width: 38px; height: 36px;
+  border: 1px solid transparent; border-radius: var(--r-md); background: transparent; color: var(--muted); cursor: pointer;
+  transition: background var(--dur-1), color var(--dur-1), transform var(--dur-1);
+}
+.mini-btn:hover { background: var(--hover-strong); color: var(--text); }
+.mini-btn:active { transform: scale(0.94); }
+.mini-btn[aria-current="page"] { background: var(--panel); border-color: var(--line); color: var(--accent); box-shadow: 0 1px 2px rgba(28, 24, 18, 0.06); }
+.mini-btn:disabled { opacity: 0.45; cursor: default; }
+.mini-sep { width: 24px; height: 1px; background: var(--line); margin: var(--s-1) 0; }
+.mini-spacer { flex: 1 1 auto; }
+.mini-badge {
+  position: absolute; top: 7px; right: 8px; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent-bright); box-shadow: 0 0 0 2px var(--chrome);
+}
+.mini-rec { margin: var(--s-1) 0 2px; border: 1px solid rgba(255, 255, 255, 0.06); background: var(--live-bg); box-shadow: var(--shadow-2); }
+.mini-rec-dot { width: 11px; height: 11px; border-radius: 50%; background: #ff5f64; box-shadow: 0 0 0 3px rgba(255, 95, 100, 0.2); transition: transform var(--dur-2) var(--ease-spring); }
+.mini-rec:hover { background: var(--live-bg); box-shadow: var(--shadow-2), 0 0 0 4px var(--record-soft); }
+.mini-rec:hover .mini-rec-dot { transform: scale(1.15); }
+.mini-rec.recording { background: var(--live-bg); border-color: var(--live-bg); box-shadow: var(--shadow-2); }
+.mini-rec.recording .mini-rec-dot { width: 10px; height: 10px; border-radius: 2px; background: #ff5f64; animation: rec-pulse 1.4s ease-in-out infinite; }
+.mini-rec-time { font-size: 11px; color: var(--record); margin-bottom: 2px; }

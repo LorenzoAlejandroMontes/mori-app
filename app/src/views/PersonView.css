@@ -1,0 +1,28 @@
+/* ── Persone e progetti ─────────────────────────────────────────────── */
+.people-filter { flex: 0 1 260px; }
+.people-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--s-3); }
+.people-card-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.people-card .nm { font: 600 14.5px/1.4 var(--font-ui); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.people-card .sb { font: var(--t-meta); font-weight: 400; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.people-card:focus-visible { border-color: var(--accent); }
+.person-disc.sm { width: 40px; height: 40px; font-size: 20px; border-radius: 13px; }
+.people-none { grid-column: 1 / -1; margin: 0; padding: var(--s-6) 0; font: var(--t-body); color: var(--muted); text-align: center; }
+
+/* The cards arrive one after the other. */
+.people-grid .people-card { animation: view-in var(--dur-4) var(--ease-out) both; }
+.people-grid .people-card:nth-child(2) { animation-delay: 40ms; }
+.people-grid .people-card:nth-child(3) { animation-delay: 80ms; }
+.people-grid .people-card:nth-child(4) { animation-delay: 120ms; }
+.people-grid .people-card:nth-child(5) { animation-delay: 160ms; }
+.people-grid .people-card:nth-child(6) { animation-delay: 200ms; }
+.people-grid .people-card:nth-child(n + 7) { animation-delay: 240ms; }
+
+.person-back { margin: 0 0 var(--s-4) -6px; }
+.brief-refresh { margin-left: auto; }
+.sk-disc { width: 56px; height: 56px; border-radius: 18px; flex: 0 0 auto; }
+.sk-name { width: 220px; height: 30px; border-radius: var(--r-md); }
+.person-view .person-head .sk-lines { display: flex; flex-direction: column; gap: 10px; }
+.person-view .person-head .sk-sub { width: 160px; height: 12px; }
+@container page (max-width: 640px) {
+  .person-grid2 { grid-template-columns: 1fr; }
+}

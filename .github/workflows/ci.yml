@@ -1,0 +1,130 @@
+name: CI
+
+# Everything a contributor runs before pushing, on a clean Linux machine.
+# Mori ships for Windows, but the backend builds anywhere (src-tauri/src/platform.rs),
+# so one Linux job checks the whole app: typecheck, build, the runnable checks
+# against the real schema, the Python sidecars' syntax and the Rust tests.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm exec tsc --noEmit -p tsconfig.json
+
+      - name: Build the frontend
+        run: pnpm exec vite build
+
+      - name: Runnable checks (real modules, real schema, throwaway SQLite)
+        run: node scripts/checks.mjs
+
+      - name: Contrast of the design tokens (WCAG AA, light and dark)
+        run: node scripts/contrast.mjs
+
+      - name: Logic tests
+        run: |
+          node tests/todo-logic.test.ts
+          node tests/companion-logic.test.ts
+
+      - name: Python sidecars compile
+        run: python3 -m py_compile scripts/*.py
+
+      - name: System libraries for Tauri
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: app/src-tauri
+
+      - name: Rust tests
+        working-directory: app/src-tauri
+        run: cargo test --locked
+
+      # The Windows-only code (process flags, foreground window) is behind
+      # cfg(windows): compile it too, cross, with MinGW — no Windows runner needed.
+      - name: Windows build check
+        working-directory: app/src-tauri
+        run: |
+          sudo apt-get install -y gcc-mingw-w64-x86-64
+          rustup target add x86_64-pc-windows-gnu
+          cargo check --locked --target x86_64-pc-windows-gnu
+
+  # The same checks on a real Mac (Apple Silicon): the app must keep building
+  # there while macOS support is being finished (docs/MACOS.md, M0).
+  macos:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm exec tsc --noEmit -p tsconfig.json
+
+      - name: Build the frontend
+        run: pnpm exec vite build
+
+      - name: Runnable checks
+        run: node scripts/checks.mjs
+
+      - name: Python dependencies resolve on macOS
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install --dry-run -r requirements.txt
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: app/src-tauri
+
+      - name: Rust tests
+        working-directory: app/src-tauri
+        run: cargo test --locked

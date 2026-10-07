@@ -1,0 +1,10 @@
+# Mori's local Python sidecars (recording, transcription, embeddings).
+# Recreate the venv with:  py -3 -m venv .venv && .venv\Scripts\pip install -r requirements.txt
+#   (macOS/Linux: python3 -m venv .venv && .venv/bin/pip install -r requirements.txt)
+# Mori also finds a venv in ~/.mori/venv. All local & offline — nothing here
+# calls a paid API; Whisper and the embedding model download once on first use.
+
+faster-whisper>=1.2      # local Whisper transcription (transcribe*.py)
+soundcard>=0.4           # mic + system audio capture (record.py)
+numpy>=2.0               # audio buffers
+fastembed>=0.8           # local ONNX text embeddings for recall (embed.py); no torch

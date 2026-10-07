@@ -1,0 +1,17 @@
+node_modules
+dist
+preview-dist
+.DS_Store
+*.log
+
+# Python venv for local Whisper/recording
+.venv
+
+# Rust / Tauri
+src-tauri/target
+src-tauri/gen/schemas
+
+# Local databases & generated icon source
+*.db
+*.db-*
+src-tauri/icon-src.png

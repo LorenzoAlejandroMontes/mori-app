@@ -1,0 +1,6 @@
+# Le migrazioni sono byte, non testo. sqlx salva in _sqlx_migrations lo SHA-384
+# di ogni file e rifiuta il database se cambia anche solo un a-capo
+# ("migration N was previously applied but has been modified"). Con -text git
+# non converte gli a-capo: ogni checkout ha gli stessi byte del commit.
+# 0001-0004 sono LF, da 0005 in poi CRLF: cosi' li ricordano i database esistenti.
+app/src-tauri/migrations/*.sql -text

@@ -1,0 +1,27 @@
+name: Feature request
+description: Something Mori should do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: moment
+    attributes:
+      label: The moment
+      description: When did you need it? Describe the real situation, not the solution.
+      placeholder: After a call with a client I wanted to ...
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - All

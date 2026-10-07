@@ -1,0 +1,82 @@
+/* ── Da fare (reference: Things) ────────────────────────────────────── */
+.todos-search { flex: 0 1 300px; }
+
+.todos-tabs { margin-bottom: var(--s-4); }
+.todos-tab .count { font: 500 11px/1 var(--font-mono); padding: 2px 6px; border-radius: var(--r-sm); background: var(--panel-2); color: var(--muted); transition: background var(--dur-1), color var(--dur-1); }
+.todos-tab[aria-selected="true"] .count { background: var(--accent-soft); color: var(--accent); }
+
+/* "Aggiungi una cosa da fare": a quiet line that becomes a field. */
+.todos-add {
+  display: flex; align-items: center; gap: var(--s-3); min-height: 44px; padding: 4px 6px 4px 12px;
+  border: 1px dashed var(--line-strong); border-radius: var(--r-lg); color: var(--muted);
+  transition: border-color var(--dur-2), background var(--dur-2), box-shadow var(--dur-2);
+}
+.todos-add:hover { border-color: var(--ink-soft); }
+.todos-add:focus-within { border-style: solid; border-color: var(--accent); background: var(--panel); box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow-1); }
+.todos-add input { flex: 1; min-width: 0; height: 32px; border: none; outline: none !important; background: transparent; font: var(--t-body); font-size: 14.5px; color: var(--text); }
+.todos-add input::placeholder { color: var(--muted); }
+.todos-add .when { flex: 0 0 150px; height: 30px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel-2); font-size: 13px; }
+
+.todos-bucket { margin-top: var(--s-6); }
+.todos-bucket ul, .todos-done-body { list-style: none; margin: 0; padding: 0; }
+.todos-bucket-label {
+  display: flex; align-items: center; gap: var(--s-2); margin: 0 0 var(--s-1); padding: 0 var(--s-2);
+  font: var(--t-label); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+}
+.todos-bucket-label::after { content: ""; flex: 1; height: 1px; background: var(--line); margin-left: var(--s-1); }
+.todos-bucket-label .n { font: 500 11px/1 var(--font-mono); letter-spacing: 0; }
+.todos-bucket.late .todos-bucket-label { color: var(--record); }
+
+/* A row: tick, what, then when · from which call · whose. */
+.todo-row {
+  display: flex; gap: var(--s-3); align-items: flex-start; padding: 11px var(--s-2);
+  border-radius: var(--r-md); transition: background var(--dur-1), opacity var(--dur-3), transform var(--dur-3) var(--ease-out);
+}
+.todo-row:hover { background: var(--hover); }
+.todo-row:focus-visible { background: var(--selected); }
+.todo-row + .todo-row { box-shadow: inset 0 1px 0 var(--line); }
+.todo-row:hover + .todo-row, .todo-row:hover { box-shadow: none; }
+.todo-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.todo-txt {
+  padding: 0; border: none; background: none; text-align: left; cursor: text;
+  font: 500 14.5px/21px var(--font-ui); color: var(--text); overflow-wrap: anywhere; transition: color var(--dur-2);
+}
+.todo-row.isdone .todo-txt { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line-strong); font-weight: 400; }
+/* Ticked a moment ago: done, still in place, about to go. */
+.todo-row.settling { opacity: 0.5; transform: translateX(4px); }
+.todo-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.todo-who {
+  margin-left: auto; height: 22px; padding: 0 9px; border: none; border-radius: var(--r-full);
+  background: var(--panel-2); font: 500 12px/1 var(--font-ui); color: var(--ink-soft); cursor: pointer;
+}
+.todo-who.me { background: var(--accent-soft); color: var(--accent); }
+.todos[data-tab="mie"] .todo-who.me { display: none; }
+.todo-who.add { background: transparent; border: 1px dashed var(--line-strong); color: var(--muted); }
+.todo-acts { flex: 0 0 auto; display: flex; gap: 2px; opacity: 0; transition: opacity var(--dur-1); }
+.todo-row:hover .todo-acts, .todo-row:focus-within .todo-acts, .todo-row:focus-visible .todo-acts { opacity: 1; }
+.todo-acts .icon-btn { width: 28px; height: 28px; }
+.todo-edit {
+  width: 100%; height: 30px; padding: 0 8px; border: 1px solid var(--accent); border-radius: var(--r-md);
+  background: var(--panel); font: var(--t-body); font-size: 14.5px; color: var(--text);
+}
+.todo-inline {
+  width: 170px; height: 26px; padding: 0 8px; border: 1px solid var(--accent); border-radius: var(--r-md);
+  background: var(--panel); font: var(--t-small); color: var(--text);
+}
+
+.todos-done { margin-top: var(--s-8); padding-top: var(--s-4); border-top: 1px solid var(--line); }
+.todos-done-head {
+  display: inline-flex; align-items: center; gap: var(--s-2); height: 28px; padding: 0 var(--s-2); border: none;
+  border-radius: var(--r-md); background: none; font: 600 13px/1 var(--font-ui); color: var(--muted); cursor: pointer;
+}
+.todos-done-head:hover { background: var(--hover); color: var(--text); }
+.todos-done-head svg { transition: transform var(--dur-3) var(--ease-spring); }
+.todos-done-head.open svg { transform: rotate(90deg); }
+.todos-done-body { animation: pop-in var(--dur-2) var(--ease-out); }
+
+/* Loading: the shape of the list. */
+.todos-skeleton { margin-top: var(--s-6); }
+.sk-row { display: flex; gap: var(--s-3); padding: 12px var(--s-2); }
+.sk-check { width: 19px; height: 19px; border-radius: 50%; flex: 0 0 auto; }
+.sk-lines { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.sk-sub { width: 30%; height: 10px; }

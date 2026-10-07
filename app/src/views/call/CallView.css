@@ -1,0 +1,242 @@
+/* ── Pagina della call (docs/DESIGN.md §5) ──────────────────────────────
+   One column of reading width; the bar on top holds every action. The chat
+   panel sits beside the document when there is room, over it when there is
+   not (the container query below decides, on the page's own width). */
+
+.call-page { position: relative; display: flex; height: 100%; overflow: hidden; container-type: inline-size; container-name: call; }
+.call-doc { flex: 1 1 auto; min-width: 0; overflow-y: auto; scroll-padding-top: 64px; }
+
+.call-bar {
+  position: sticky; top: 0; z-index: var(--z-sticky); display: flex; align-items: center; gap: var(--s-2);
+  height: 54px; padding: 0 var(--s-4) 0 var(--s-3);
+  background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(10px) saturate(1.2);
+  border-bottom: 1px solid transparent;
+}
+.call-bar-actions { display: flex; align-items: center; gap: var(--s-1); margin-left: auto; }
+.back-btn { color: var(--muted); padding-left: 6px; }
+.back-btn svg { transition: transform var(--dur-2) var(--ease-spring); }
+.back-btn:hover svg { transform: translateX(-2px); }
+.btn.pressed { background: var(--selected); border-color: color-mix(in srgb, var(--accent) 40%, transparent); color: var(--accent); }
+.lock-btn.on { background: var(--accent-2-soft); color: var(--accent-2); }
+.lock-btn.on:hover { background: var(--accent-2-soft); color: var(--accent-2); }
+
+.call-col { max-width: 760px; margin: 0 auto; padding: var(--s-5) var(--s-10) var(--s-12); }
+
+.call-head { margin-bottom: var(--s-6); }
+.call-title { margin: 0 0 var(--s-3); font: var(--t-title); font-size: 38px; line-height: 42px; letter-spacing: -0.015em; color: var(--text); }
+.title-btn {
+  display: inline; padding: 0 6px; margin: 0 -6px; border: none; border-radius: var(--r-md);
+  background: transparent; color: inherit; font: inherit; letter-spacing: inherit; text-align: left; cursor: text;
+  transition: background var(--dur-1);
+}
+.title-btn svg { margin-left: 10px; vertical-align: 4px; color: var(--muted); opacity: 0; transition: opacity var(--dur-1); }
+.title-btn:hover { background: var(--hover); }
+.title-btn:hover svg, .title-btn:focus-visible svg { opacity: 1; }
+.title-edit {
+  width: 100%; margin: 0 0 var(--s-3); padding: 0 6px; font: var(--t-title); font-size: 38px; line-height: 42px; letter-spacing: -0.015em; color: var(--text);
+  background: var(--panel); border: 1px solid var(--accent); border-radius: var(--r-md);
+}
+
+/* One line: date · people · categories. It wraps, it never becomes rows of chips. */
+.call-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px var(--s-3); font: var(--t-small); color: var(--muted); }
+.meta-item { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.meta-people { display: inline; }
+.meta-item + .meta-item::before { content: "·"; margin-right: 6px; color: var(--line-strong); }
+.meta-dur { margin-left: 8px; padding: 2px 7px; border-radius: 6px; background: var(--panel-2); font-size: 11.5px; color: var(--muted); }
+.person-link {
+  padding: 0; border: none; background: none; color: var(--ink-soft); font: inherit; cursor: pointer;
+  text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px;
+  transition: color var(--dur-1);
+}
+.person-link:hover { color: var(--accent); text-decoration-color: currentColor; }
+
+/* Tags: a category, or "privata". */
+.tag {
+  display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px;
+  border: 1px solid var(--line); border-radius: var(--r-full); background: var(--panel);
+  font: 500 12px/1 var(--font-ui); color: var(--ink-soft); white-space: nowrap;
+}
+.tag-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--tag, var(--line-strong)); }
+.tag-x {
+  display: inline-grid; place-items: center; width: 16px; height: 16px; margin-right: -4px; padding: 0;
+  border: none; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer;
+}
+.tag-x:hover { background: var(--hover-strong); color: var(--record); }
+.tag-add { border-style: dashed; background: transparent; color: var(--muted); cursor: pointer; transition: border-color var(--dur-1), color var(--dur-1); }
+.tag-add:hover { border-color: var(--line-strong); color: var(--text); }
+.tag-private { border-color: color-mix(in srgb, var(--accent-2) 35%, transparent); background: var(--accent-2-soft); color: var(--accent-2); }
+
+.cat-add-wrap { position: relative; display: inline-flex; }
+.picker-backdrop { position: fixed; inset: 0; z-index: var(--z-menu); }
+.cat-picker {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: calc(var(--z-menu) + 1); width: 270px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-lg);
+  box-shadow: var(--shadow-2); overflow: hidden; animation: pop-in var(--dur-2) var(--ease-spring); transform-origin: top left;
+}
+.cat-picker-search {
+  width: 100%; padding: 10px 12px; border: none; border-bottom: 1px solid var(--line);
+  background: transparent; font: var(--t-small); color: var(--text); outline: none;
+}
+.cat-picker-search::placeholder { color: var(--muted); }
+.cat-picker-list { max-height: 260px; overflow-y: auto; padding: var(--s-1); }
+.cat-picker-row {
+  display: flex; align-items: center; gap: var(--s-2); width: 100%; padding: 7px 8px; border: none;
+  background: transparent; border-radius: var(--r-md); font: var(--t-small); color: var(--text);
+  text-align: left; cursor: pointer;
+}
+.cat-picker-row:hover { background: var(--hover); }
+.cat-picker-row.on { color: var(--accent); font-weight: 600; }
+.cpr-check { width: 14px; display: inline-flex; color: var(--accent); flex: 0 0 auto; }
+.cpr-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cpr-count { font: 400 11px/1 var(--font-mono); color: var(--muted); }
+.cat-picker-row.create { color: var(--accent); font-weight: 600; }
+.cat-picker-empty { margin: 0; padding: 10px 8px; font: var(--t-small); color: var(--muted); }
+
+.call-tabs { margin-top: var(--s-2); }
+.tab-count {
+  font: 500 11px/1 var(--font-mono); padding: 2px 6px; border-radius: var(--r-sm);
+  background: var(--amber-soft); color: var(--amber);
+}
+.call-panel { padding-top: var(--s-6); outline: none; animation: view-in var(--dur-3) var(--ease-out); }
+.call-empty { margin: 0; padding: var(--s-6) 0; font: var(--t-body); color: var(--muted); }
+
+/* Cosa Mori ricorda */
+.memories { margin-bottom: var(--s-6); padding-bottom: var(--s-5); border-bottom: 1px solid var(--line); }
+.memories ul { list-style: none; margin: 0; padding: 0; }
+.eyebrow { margin: 0 0 var(--s-3); font: var(--t-label); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.memory-row { display: flex; gap: var(--s-4); align-items: baseline; padding: 5px 0; font: var(--t-read); color: var(--ink-soft); }
+.mem-kind { flex: 0 0 110px; font: var(--t-label); letter-spacing: 0.05em; text-transform: uppercase; color: var(--accent); }
+.mk-commitment { color: var(--record); }
+.mk-preference { color: var(--accent-2); }
+.mk-open_question { color: var(--amber); }
+
+/* Da fare of this call */
+.action-list { list-style: none; margin: 0; padding: 0; }
+.action-row { display: flex; align-items: flex-start; gap: var(--s-3); padding: 10px 0; border-bottom: 1px solid var(--line); font: var(--t-read); color: var(--text); }
+.action-row:last-child { border-bottom: none; }
+.action-text { flex: 1; min-width: 0; transition: color var(--dur-2); }
+.action-row.done .action-text { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line-strong); }
+
+/* Notices on a call: failed, waiting for a model, not understood yet. */
+.notice-card {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3) var(--s-4); margin-bottom: var(--s-5);
+  padding: var(--s-3) var(--s-4); border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--chrome);
+}
+.notice-text { flex: 1 1 260px; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.notice-text strong { font: 600 14px/1.4 var(--font-ui); color: var(--text); }
+.notice-text span { font: var(--t-small); color: var(--muted); }
+.notice-err { margin: 0; font: 400 12px/1.5 var(--font-mono) !important; color: var(--record) !important; overflow-wrap: anywhere; max-height: 72px; overflow: hidden; }
+.notice-card.ko { border-color: color-mix(in srgb, var(--record) 30%, transparent); background: var(--record-soft); }
+.notice-card.wait { border-color: color-mix(in srgb, var(--accent-2) 30%, transparent); background: var(--accent-2-soft); }
+
+/* Transcribing: what is happening, and the shape of what is coming. */
+.tr-pending { padding: var(--s-5) 0; }
+.tr-head { display: flex; align-items: flex-start; gap: var(--s-3); margin-bottom: var(--s-6); }
+.tr-head .spinner { margin-top: 5px; }
+.tr-head strong { display: block; font: var(--t-section); color: var(--text); }
+.tr-head span { font: var(--t-small); color: var(--muted); }
+.tr-head-text { flex: 1; min-width: 0; max-width: 520px; }
+.tr-progress { display: flex !important; flex-direction: column; gap: 6px; margin-top: var(--s-3); }
+.tr-head .tr-faster { display: block; margin-top: var(--s-2); color: var(--ink-soft); }
+.tr-progress-txt { font-size: 12px !important; font-variant-numeric: tabular-nums; }
+.sk-title { display: block; width: 62%; height: 34px; margin: var(--s-6) 0 var(--s-3); border-radius: var(--r-md); }
+.sk-meta { display: block; width: 40%; height: 14px; margin-bottom: var(--s-8); }
+
+/* ── The transcript: two voices, time on the left ─────────────────────── */
+.seg-player { display: flex; flex-direction: column; gap: var(--s-2); }
+.seg-controls {
+  position: sticky; top: 54px; z-index: 2; display: flex; align-items: center; gap: var(--s-3);
+  padding: var(--s-2) 0; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px);
+}
+.seg-play {
+  display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; border: none;
+  background: var(--accent-fill); color: var(--on-fill); cursor: pointer; flex: 0 0 auto;
+  box-shadow: 0 2px 8px -2px rgba(10, 115, 105, 0.5); transition: transform var(--dur-2) var(--ease-spring), background var(--dur-1);
+}
+.seg-play:hover { background: var(--accent-fill-hover); transform: scale(1.06); }
+.seg-play:active { transform: scale(0.95); }
+.seg-clock { font-size: 12.5px; color: var(--text); min-width: 40px; }
+.seg-total { font-size: 12.5px; color: var(--muted); }
+.seg-hint { font: var(--t-meta); font-weight: 400; color: var(--muted); }
+.seg-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px var(--s-4); margin-bottom: var(--s-2); font: var(--t-meta); font-weight: 400; color: var(--muted); }
+.seg-share { display: inline-flex; align-items: center; gap: 6px; }
+.seg-share b { font-weight: 600; color: var(--ink-soft); }
+.seg-share .mono { color: var(--muted); }
+.seg-share::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent-2-bright); }
+.seg-share.me::before { background: var(--accent-bright); }
+
+/* The strip of time: two lanes, you above, the other below. */
+.voices-tl {
+  position: relative; flex: 1 1 auto; min-width: 80px; height: 26px; border-radius: 6px; cursor: pointer;
+  background: var(--panel-2); overflow: hidden;
+}
+.voices-tl::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--line); }
+.vtl-block { position: absolute; height: 9px; border-radius: 2px; opacity: 0.9; transition: opacity var(--dur-1); }
+.vtl-block.me { top: 3px; background: var(--accent-bright); }
+.vtl-block.other { bottom: 3px; background: var(--accent-2-bright); }
+.voices-tl:hover .vtl-block { opacity: 1; }
+.vtl-head { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--text); z-index: 1; box-shadow: 0 0 0 1px var(--bg); }
+
+.dialogue { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.turn { display: block; }
+.turn-btn {
+  display: grid; grid-template-columns: 48px 1fr; gap: var(--s-3); width: 100%; padding: 7px 8px 7px 0;
+  border: none; border-radius: var(--r-md); background: transparent; text-align: left; font: inherit; color: inherit;
+  transition: background var(--dur-1);
+}
+.dialogue.no-time .turn-btn { grid-template-columns: 1fr; padding-left: 0; }
+button.turn-btn { cursor: pointer; }
+button.turn-btn:hover { background: var(--hover); }
+.turn-time { padding-top: 4px; font-size: 11.5px; color: var(--muted); text-align: right; }
+.turn-body { display: flex; flex-direction: column; gap: 2px; padding-left: var(--s-3); border-left: 2px solid var(--accent-bright); }
+.turn.other .turn-body { border-left-color: var(--accent-2-bright); }
+.speaker { font: var(--t-label); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); padding-top: 2px; }
+.turn.other .speaker { color: var(--accent-2); }
+.turn-text { font: var(--t-read); color: var(--ink-soft); }
+.turn.active .turn-btn { background: var(--accent-soft); }
+.turn.active.other .turn-btn { background: var(--accent-2-soft); }
+.turn.active .turn-text { color: var(--text); }
+.transcript { font: var(--t-read); color: var(--ink-soft); white-space: pre-wrap; }
+
+/* "Chi è l'interlocutore?" */
+.speaker-namer { margin: 0 0 var(--s-4); }
+.sn-row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-3); padding: 8px 10px 8px 12px;
+  border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--chrome); font: var(--t-small); color: var(--ink-soft);
+}
+.sn-row strong { color: var(--accent-2); }
+.sn-ico { flex: 0 0 auto; color: var(--accent-2); }
+.sn-row input {
+  flex: 1 1 180px; min-width: 140px; height: 30px; padding: 0 10px; font: var(--t-small); color: var(--text);
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); outline: none;
+}
+.sn-row input:focus { border-color: var(--accent); }
+
+/* ── The chat beside the call ─────────────────────────────────────────── */
+.chat-panel {
+  flex: 0 0 380px; display: flex; flex-direction: column; min-width: 0; height: 100%;
+  background: var(--chrome); border-left: 1px solid var(--line);
+  animation: panel-in var(--dur-4) var(--ease-out);
+}
+.chat-panel-head { display: flex; align-items: center; gap: var(--s-2); height: 54px; padding: 0 var(--s-2) 0 var(--s-4); font: 600 14px/1 var(--font-ui); color: var(--text); }
+.chat-panel-head span { flex: 1; }
+.chat-panel-scrim { display: none; }
+.panel-hint { margin: var(--s-2) 0 0; font: var(--t-small); color: var(--muted); }
+@keyframes panel-in { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: none; } }
+
+/* Not enough room for both: the panel goes over the document. */
+@container call (max-width: 1080px) {
+  .chat-panel {
+    position: absolute; top: 0; right: 0; bottom: 0; z-index: var(--z-panel); width: min(380px, 92%);
+    box-shadow: var(--shadow-3); border-left-color: var(--line);
+  }
+  .chat-panel-scrim { display: block; position: absolute; inset: 0; z-index: calc(var(--z-panel) - 1); background: var(--scrim); opacity: 0.5; animation: fade-in var(--dur-2); }
+}
+/* Narrow: the labels of the bar go, the icons stay (with their names). */
+@container call (max-width: 640px) {
+  .collapsible .btn-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .collapsible { padding: 0 8px; }
+  .call-col { padding: var(--s-3) var(--s-5) var(--s-10); }
+  .call-title, .title-edit { font-size: 30px; line-height: 34px; }
+  .seg-meta .seg-hint { display: none; }
+}

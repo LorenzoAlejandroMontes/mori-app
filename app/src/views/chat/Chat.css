@@ -1,0 +1,93 @@
+/* ── Chiedi a Mori: the page and the thread (shared with the call panel) ── */
+
+.chat-page { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+
+/* A slim bar on top of a page: title on the left, its actions on the right. */
+.page-bar {
+  flex: 0 0 auto; display: flex; align-items: center; gap: var(--s-3); height: 54px; padding: 0 var(--s-4) 0 var(--s-6);
+  border-bottom: 1px solid var(--line);
+}
+.page-bar-title { flex: 1; display: flex; align-items: center; gap: 9px; margin: 0; font: 600 14px/1 var(--font-ui); color: var(--text); }
+
+.thread { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+.thread-scroll { flex: 1 1 auto; overflow-y: auto; padding: var(--s-6) var(--s-6) var(--s-2); }
+.thread-col { max-width: 720px; margin: 0 auto; }
+.thread.compact .thread-scroll { padding: var(--s-2) var(--s-4); }
+.thread.compact .thread-col { max-width: none; }
+
+/* Empty: teach, then offer three real questions. */
+.chat-hello { max-width: 520px; margin: 9vh auto 0; text-align: center; animation: view-in var(--dur-4) var(--ease-out); }
+.chat-hello .mori-mark { filter: drop-shadow(0 8px 16px rgba(13, 148, 136, 0.18)); }
+.chat-hello h2 { margin: var(--s-4) 0 var(--s-2); font: var(--t-title); font-size: 36px; line-height: 40px; color: var(--text); }
+.chat-hello p { margin: 0 auto; max-width: 440px; font: var(--t-body); color: var(--muted); }
+.chat-starters { display: flex; flex-direction: column; gap: var(--s-2); margin-top: var(--s-6); }
+.starter {
+  display: flex; align-items: center; gap: var(--s-3); padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--panel);
+  font: var(--t-body); color: var(--text); text-align: left; cursor: pointer;
+  transition: border-color var(--dur-2), transform var(--dur-2) var(--ease-out), box-shadow var(--dur-2);
+}
+.starter::after { content: "↵"; margin-left: auto; font: 500 12px/1 var(--font-mono); color: var(--muted); opacity: 0; transition: opacity var(--dur-1); }
+.starter:hover { border-color: var(--line-strong); transform: translateY(-1px); box-shadow: var(--shadow-1); }
+.starter:hover::after { opacity: 1; }
+.starter:active { transform: none; }
+
+/* Turns: Mori's answers read as text, yours sit in a soft bubble on the right. */
+.bubble { display: flex; gap: var(--s-3); margin: var(--s-4) 0; max-width: 100%; animation: bubble-in var(--dur-3) var(--ease-out); }
+@keyframes bubble-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.bubble.user { justify-content: flex-end; }
+.bubble-dragon { flex: 0 0 auto; margin-top: 3px; display: inline-flex; }
+.bubble-body { min-width: 0; font: var(--t-read); color: var(--ink-soft); }
+.bubble.user .bubble-body {
+  max-width: 82%; padding: 9px 14px; border-radius: 18px 18px 6px 18px;
+  background: var(--user-bubble-bg); color: var(--user-bubble-fg);
+}
+.bubble.error .bubble-body { padding: 9px 14px; border-radius: var(--r-lg); background: var(--record-soft); color: var(--record); }
+.bubble-text { white-space: pre-wrap; }
+.thread.compact .bubble { margin: var(--s-3) 0; }
+.thread.compact .bubble-body { font-size: 14px; line-height: 22px; }
+
+.sources { display: flex; flex-wrap: wrap; gap: 6px; margin-top: var(--s-3); }
+.source-item { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; }
+.source-chip {
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  height: 24px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--r-full); background: transparent;
+  font: 500 12px/22px var(--font-ui); color: var(--muted); cursor: pointer; transition: color var(--dur-1), border-color var(--dur-1);
+}
+.source-chip:hover { color: var(--text); border-color: var(--line-strong); }
+.source-seek {
+  flex: 0 0 auto; height: 24px; padding: 0 9px; border: 1px solid transparent;
+  border-radius: var(--r-full); background: var(--accent-soft); font: 600 11.5px/22px var(--font-mono); color: var(--accent); cursor: pointer;
+  transition: background var(--dur-1), color var(--dur-1);
+}
+.source-seek:hover { background: var(--accent-fill); border-color: var(--accent-fill); color: var(--on-fill); }
+
+.thinking { display: flex; gap: 5px; padding: 6px 0; }
+.thinking span { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-bright); opacity: 0.4; animation: blink 1.2s infinite; }
+.thinking span:nth-child(2) { animation-delay: 0.2s; background: color-mix(in srgb, var(--accent-bright) 50%, var(--accent-2-bright)); }
+.thinking span:nth-child(3) { animation-delay: 0.4s; background: var(--accent-2-bright); }
+@keyframes blink { 0%, 100% { opacity: 0.25; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-2px); } }
+
+/* The field: one box, the send button inside, grows with the text. */
+.composer { flex: 0 0 auto; padding: var(--s-3) var(--s-6) var(--s-4); }
+.thread.compact .composer { padding: var(--s-2) var(--s-3) var(--s-3); }
+.composer-box {
+  display: flex; align-items: flex-end; gap: var(--s-2); max-width: 720px; margin: 0 auto; padding: 6px 6px 6px 16px;
+  border: 1px solid var(--line); border-radius: 20px; background: var(--panel);
+  box-shadow: var(--shadow-2); transition: border-color var(--dur-2), box-shadow var(--dur-2);
+}
+.composer-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft), var(--shadow-2); }
+.composer-box textarea {
+  flex: 1; min-height: 22px; max-height: 152px; padding: 7px 0; border: none; outline: none !important; resize: none;
+  background: transparent; font: var(--t-body); font-size: 14.5px; line-height: 22px; color: var(--text);
+}
+.composer-box textarea:focus-visible { outline: none !important; }
+.composer-box textarea::placeholder { color: var(--muted); }
+.composer-send {
+  flex: 0 0 auto; display: inline-grid; place-items: center; width: 36px; height: 36px; border: none;
+  border-radius: 14px; background: var(--accent-fill); color: var(--on-fill); cursor: pointer;
+  transition: background var(--dur-1), transform var(--dur-2) var(--ease-spring), opacity var(--dur-1);
+}
+.composer-send:hover:not(:disabled) { background: var(--accent-fill-hover); transform: scale(1.05); }
+.composer-send:active:not(:disabled) { transform: scale(0.94); }
+.composer-send:disabled { opacity: 0.35; cursor: default; }
+.composer-hint { max-width: 720px; margin: 8px auto 0; font: var(--t-meta); font-weight: 400; color: var(--muted); text-align: center; }

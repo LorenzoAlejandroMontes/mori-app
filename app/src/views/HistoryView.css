@@ -1,0 +1,54 @@
+/* ── Tutte le call ──────────────────────────────────────────────────── */
+.list-tools { display: flex; flex-direction: column; gap: var(--s-3); margin-bottom: var(--s-4); }
+
+.list-group { margin-top: var(--s-5); }
+.list-group ul { list-style: none; margin: 0; padding: 0; }
+.list-group-label {
+  display: flex; align-items: center; gap: var(--s-2); margin: 0 0 var(--s-1); padding: 0 var(--s-2);
+  font: var(--t-label); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+}
+.list-group-label::after { content: ""; flex: 1; height: 1px; background: var(--line); margin-left: var(--s-1); }
+
+.call-row {
+  display: flex; align-items: center; gap: var(--s-4); width: 100%; min-height: 50px; padding: 7px var(--s-2);
+  border: none; border-radius: var(--r-md); background: transparent; color: var(--text); text-align: left; cursor: pointer;
+  transition: background var(--dur-1);
+}
+.call-row:hover { background: var(--hover); }
+.call-row:focus-visible { background: var(--selected); }
+.call-row:hover .cr-title { color: var(--accent); }
+.cr-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cr-title { display: flex; align-items: center; gap: 6px; font: 600 14.5px/1.35 var(--font-ui); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: color var(--dur-1); }
+.cr-priv { display: inline-flex; color: var(--accent-2); flex: 0 0 auto; }
+.cr-people { font: var(--t-meta); font-weight: 400; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cr-side { flex: 0 0 auto; display: flex; align-items: center; gap: 6px; }
+.cr-tag { height: 20px; font-size: 11.5px; }
+.cr-more { font: 500 11px/1 var(--font-mono); color: var(--muted); }
+.cr-state { display: inline-flex; align-items: center; gap: 5px; font: var(--t-meta); color: var(--amber); }
+.cr-state.ko { color: var(--record); }
+.cr-date { min-width: 52px; text-align: right; font-size: 12px; color: var(--muted); }
+@container page (max-width: 640px) {
+  .cr-tag, .cr-more { display: none; }
+}
+
+/* Category management, opened from the ⋯ menu. */
+.cat-manage { margin-bottom: var(--s-4); padding: var(--s-3) var(--s-4); border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--chrome); animation: pop-in var(--dur-2) var(--ease-out); }
+.cat-manage-head { display: flex; align-items: center; justify-content: space-between; }
+.cat-manage-head .eyebrow { margin: 0; }
+.cat-manage-new { display: flex; gap: var(--s-2); margin: var(--s-2) 0; }
+.cat-manage-new input {
+  flex: 1; height: 32px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--panel); font: var(--t-small); color: var(--text); outline: none;
+}
+.cat-manage-new input:focus { border-color: var(--accent); }
+.cat-manage ul { list-style: none; margin: 0; padding: 0; max-height: 280px; overflow-y: auto; }
+.cat-manage-row { display: flex; align-items: center; gap: var(--s-2); padding: 3px 0; border-top: 1px solid var(--line); }
+.cat-manage-row:first-child { border-top: none; }
+.cat-name {
+  flex: 1; min-width: 0; padding: 6px 8px; border: none; border-radius: var(--r-md); background: transparent;
+  font: 600 13.5px/1.2 var(--font-ui); color: var(--text); text-align: left; cursor: text; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cat-name:hover { background: var(--hover); }
+.cat-edit { flex: 1; height: 30px; padding: 0 8px; border: 1px solid var(--accent); border-radius: var(--r-md); background: var(--panel); font: 600 13.5px/1 var(--font-ui); color: var(--text); }
+.cat-count { font-size: 11.5px; color: var(--muted); }
+.cat-manage-empty { margin: var(--s-2) 0; font: var(--t-small); color: var(--muted); }
