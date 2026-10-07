@@ -220,7 +220,9 @@ jobs:
             sleep 2
             echo "## the helper that is running"
             pgrep -fl mori-sysaudio | tee "$R/packaged_helper_$N.txt" || true
+            S=$(date +%s)
             afplay "$R/speech.wav"
+            echo "playing the sentence took $(( $(date +%s) - S )) s (it is about 5 s long)"
             sleep 2
             touch "$STOP"
             wait $P || echo "recorder exit code $?"
@@ -230,15 +232,24 @@ jobs:
             "$PY" native/mori-sysaudio/ci_check.py "$OUT.sys.wav" meeting thursday slides | tee "$R/packaged_others.json"
           }
           if attempt 1; then exit 0; fi
+          # Seen in 2 runs: both channels come back all zeros and shorter than
+          # the time that passed (3 to 4 s of samples for about 9 s of clock).
+          # That is this machine's sound system not running, before Mori is
+          # involved: restart it, and the permission daemon, then try again.
           echo "## first attempt failed: what macOS decided about the permission"
           log show --last 2m --style compact --predicate 'subsystem == "com.apple.TCC"' 2>/dev/null | grep -i -E "AudioCapture|sysaudio" | tail -40 || true
           echo "## the sound devices at this moment"
           system_profiler SPAudioDataType || true
-          echo "## restarting the permission daemon and trying once more"
-          sudo killall tccd || true
-          killall tccd || true
-          sleep 2
-          attempt 2
+          for N in 2 3; do
+            echo "## restarting the sound system and the permission daemon, attempt $N"
+            sudo killall coreaudiod || true
+            sudo killall tccd || true
+            killall tccd || true
+            sleep 6
+            osascript -e "set volume output volume 60" || true
+            if attempt $N; then exit 0; fi
+          done
+          exit 1
 
       # docs/MACOS.md, M3: honest states. When the helper is not there, or
       # stops in the middle of a call, the recorder says so in the file the
