@@ -27,3 +27,6 @@ Thumbs.db
 .env
 .env.*
 *.local
+
+# macOS helper build output
+app/native/mori-sysaudio/build/

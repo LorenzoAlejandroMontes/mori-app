@@ -33,9 +33,14 @@ Levels contract (the live "two voices" and the dead-channel warning): every
 — the last block's loudness per channel, seconds since each last had signal,
 and any capture thread that died (a device unplugged mid-call). Removed at stop.
 
+The other side on macOS. soundcard has no loopback there, so the "sys" channel
+comes from a small helper, native/mori-sysaudio (a Core Audio tap, macOS 14.2+),
+that prints 16 kHz mono s16le PCM on stdout. Same queue, same files, same
+levels: everything after the capture thread cannot tell the difference.
+
 Usage: python record.py <out_wav> <stop_file> [max_seconds]
 """
-import sys, os, time, threading, queue, wave, traceback
+import sys, os, time, threading, queue, wave, traceback, subprocess
 import numpy as np
 import soundcard as sc
 
@@ -106,6 +111,72 @@ def rec_loop(get_device, q, stop, label, errs, last_signal, last_rms=None):
             except Exception:
                 pass
         q.put(None)  # tell the writer this stream is over
+
+
+def find_sysaudio():
+    """Where the macOS helper lives: told by the app, inside Mori.app, or built from source."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    for p in (
+        os.environ.get("MORI_SYSAUDIO"),
+        os.path.join(here, "..", "..", "MacOS", "mori-sysaudio"),
+        os.path.join(here, "..", "native", "mori-sysaudio", "build", "mori-sysaudio"),
+    ):
+        if p and os.path.isfile(p):
+            return os.path.abspath(p)
+    return None
+
+
+def helper_loop(out, q, stop, label, errs, last_signal, last_rms=None):
+    """macOS: the same job as rec_loop, reading the helper's stdout instead of a device."""
+    proc = None
+    log = None
+    try:
+        path = find_sysaudio()
+        if not path:
+            raise RuntimeError("mori-sysaudio not found (bash native/mori-sysaudio/build.sh)")
+        log = open(out + ".sysaudio.log", "wb")
+        proc = subprocess.Popen(
+            [path, "--until-stdin-closes"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=log
+        )
+
+        def release():  # a read() in progress returns as soon as the helper exits
+            stop.wait()
+            try:
+                proc.stdin.close()
+            except Exception:
+                pass
+
+        threading.Thread(target=release, daemon=True).start()
+        want = int(SR * BLOCK_SECONDS) * 2
+        while not stop.is_set():
+            buf = proc.stdout.read(want)
+            if not buf:
+                if stop.is_set():
+                    break
+                raise RuntimeError(f"mori-sysaudio stopped (exit {proc.poll()})")
+            buf = buf[: len(buf) // 2 * 2]
+            mono = np.frombuffer(buf, dtype="<i2").astype("float32") / 32767.0
+            rms = float(np.sqrt(np.mean(np.square(mono)))) if mono.size else 0.0
+            if last_rms is not None:
+                last_rms[label] = rms
+            if rms > SILENCE_RMS:
+                last_signal[label] = time.time()
+            q.put(buf)
+    except Exception as e:
+        errs.append(f"{label}: {e}")
+    finally:
+        if proc is not None:
+            try:
+                proc.stdin.close()
+            except Exception:
+                pass
+            try:
+                proc.wait(timeout=3)
+            except Exception:
+                proc.kill()
+        if log is not None:
+            log.close()
+        q.put(None)
 
 
 def write_loop(path, q):
@@ -198,11 +269,20 @@ def main() -> int:
     last_rms = {"mic": 0.0, "sys": 0.0}
     mic_q, sys_q = queue.Queue(), queue.Queue()  # unbounded: capture never waits
 
+    if sys.platform == "darwin":
+        sys_thread = threading.Thread(
+            target=helper_loop, args=(out, sys_q, stop, "sys", errs, last_signal, last_rms), daemon=True
+        )
+    else:
+        sys_thread = threading.Thread(
+            target=rec_loop, args=(get_loopback, sys_q, stop, "sys", errs, last_signal, last_rms), daemon=True
+        )
+
     threads = [
         threading.Thread(target=write_loop, args=(mic_pcm, mic_q), daemon=True),
         threading.Thread(target=write_loop, args=(sys_pcm, sys_q), daemon=True),
         threading.Thread(target=rec_loop, args=(get_mic, mic_q, stop, "mic", errs, last_signal, last_rms), daemon=True),
-        threading.Thread(target=rec_loop, args=(get_loopback, sys_q, stop, "sys", errs, last_signal, last_rms), daemon=True),
+        sys_thread,
         threading.Thread(target=silence_loop, args=(out, stop, last_signal), daemon=True),
         threading.Thread(target=levels_loop, args=(out, stop, last_signal, last_rms, errs), daemon=True),
     ]
@@ -239,6 +319,13 @@ def main() -> int:
     for p in (mic_pcm, sys_pcm):
         try:
             os.remove(p)
+        except OSError:
+            pass
+
+    # The helper's log is worth keeping only when the other side failed.
+    if not any(e.startswith("sys:") for e in errs):
+        try:
+            os.remove(out + ".sysaudio.log")
         except OSError:
             pass
 

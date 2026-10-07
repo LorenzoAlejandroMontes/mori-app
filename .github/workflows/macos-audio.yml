@@ -1,0 +1,165 @@
+name: macOS audio
+
+# The hard piece of docs/MACOS.md, proven on a real Mac: while a known sentence
+# plays through the speakers, Mori's "others" channel must contain that sentence.
+# Nobody needs to own a Mac to run this.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/native/**"
+      - "app/scripts/record.py"
+      - ".github/workflows/macos-audio.yml"
+  pull_request:
+    paths:
+      - "app/native/**"
+      - "app/scripts/record.py"
+      - ".github/workflows/macos-audio.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: macos-audio-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  other-side:
+    runs-on: macos-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Results folder
+        run: |
+          mkdir -p "$RUNNER_TEMP/results"
+          echo "R=$RUNNER_TEMP/results" >> "$GITHUB_ENV"
+
+      - name: Build mori-sysaudio
+        run: |
+          bash native/mori-sysaudio/build.sh
+          file native/mori-sysaudio/build/mori-sysaudio
+          codesign -dvv native/mori-sysaudio/build/mori-sysaudio 2>&1 | head -5
+
+      - name: Machine facts
+        run: |
+          {
+            echo "## sw_vers"; sw_vers
+            echo "## csrutil"; csrutil status || true
+            echo "## audio devices"; system_profiler SPAudioDataType
+            echo "## system audio recording grants (system, user)"
+            Q="select service, client, auth_value from access where service='kTCCServiceAudioCapture';"
+            sudo sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" "$Q" || true
+            sqlite3 "$HOME/Library/Application Support/com.apple.TCC/TCC.db" "$Q" || true
+          } 2>&1 | tee "$R/machine.txt"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Python environment (the real requirements)
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install --quiet -r requirements.txt
+          .venv/bin/python -c "import soundcard, numpy, faster_whisper; print('imports ok')"
+
+      - name: A sentence to play
+        run: |
+          say -o "$R/speech.aiff" "[[slnc 500]] Hello Sarah, the meeting moved to Thursday at three. Can you bring the slides?"
+          afconvert -f WAVE -d LEI16@16000 -c 1 "$R/speech.aiff" "$R/speech.wav"
+          afinfo "$R/speech.wav" | head -6
+          osascript -e "set volume output volume 60" || true
+
+      # What a Mac that never said yes looks like. Informational.
+      - name: Helper before any permission
+        continue-on-error: true
+        run: |
+          native/mori-sysaudio/build/mori-sysaudio --seconds 9 > "$R/before.pcm" 2> "$R/before.log" &
+          H=$!
+          ( sleep 20; kill -9 $H 2>/dev/null ) &
+          sleep 2
+          afplay "$R/speech.wav"
+          wait $H || true
+          cat "$R/before.log"
+          .venv/bin/python native/mori-sysaudio/ci_check.py "$R/before.pcm" meeting thursday slides | tee "$R/before.json" || true
+
+      # On a user's Mac this is the system prompt "Mori would like to record
+      # this computer's audio". A CI machine has nobody to click it, so the
+      # answer is written where macOS keeps it.
+      - name: Allow system audio recording
+        run: |
+          SQL="CREATE TEMP TABLE t AS SELECT * FROM access WHERE service IN ('kTCCServiceMicrophone','kTCCServiceScreenCapture') GROUP BY client;
+               UPDATE t SET service='kTCCServiceAudioCapture', auth_value=2;
+               INSERT OR REPLACE INTO access SELECT * FROM t;
+               SELECT service, client, auth_value FROM access WHERE service='kTCCServiceAudioCapture';"
+          echo "## system"; sudo sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" "$SQL"
+          echo "## user"; sqlite3 "$HOME/Library/Application Support/com.apple.TCC/TCC.db" "$SQL"
+
+      - name: The helper hears the sentence
+        run: |
+          native/mori-sysaudio/build/mori-sysaudio --seconds 9 > "$R/helper.pcm" 2> "$R/helper.log" &
+          H=$!
+          ( sleep 20; kill -9 $H 2>/dev/null ) &
+          sleep 2
+          afplay "$R/speech.wav"
+          wait $H || true
+          cat "$R/helper.log"
+          .venv/bin/python native/mori-sysaudio/ci_check.py "$R/helper.pcm" meeting thursday slides | tee "$R/helper.json"
+
+      - name: Mori's recorder puts it in the "others" channel
+        run: |
+          OUT="$R/call.wav"; STOP="$R/stop"
+          .venv/bin/python scripts/record.py "$OUT" "$STOP" 60 > "$R/record.out" 2> "$R/record.err" &
+          P=$!
+          for i in $(seq 1 100); do [ -f "$OUT.started" ] && break; sleep 0.2; done
+          [ -f "$OUT.started" ] || { echo "the recorder did not start"; cat "$R/record.err"; exit 1; }
+          sleep 2
+          afplay "$R/speech.wav" &
+          A=$!
+          sleep 4
+          cp "$OUT.levels" "$R/levels_while_playing.json" 2>/dev/null || true
+          wait $A
+          sleep 2
+          touch "$STOP"
+          wait $P
+          echo "## recorder said"; cat "$R/record.out" "$R/record.err"
+          echo "## levels while the sentence was playing"; cat "$R/levels_while_playing.json" 2>/dev/null || echo "(none)"
+          echo
+          echo "## the others' channel"
+          .venv/bin/python native/mori-sysaudio/ci_check.py "$OUT.sys.wav" meeting thursday slides | tee "$R/others.json"
+          echo "## your channel (nobody is speaking: informational)"
+          .venv/bin/python native/mori-sysaudio/ci_check.py "$OUT.mic.wav" meeting | tee "$R/you.json" || true
+
+      # What Mori has to notice and say out loud: a "no" gives silence, not an error.
+      - name: Helper after the permission is refused
+        continue-on-error: true
+        run: |
+          SQL="UPDATE access SET auth_value=0 WHERE service='kTCCServiceAudioCapture';"
+          sudo sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" "$SQL"
+          sqlite3 "$HOME/Library/Application Support/com.apple.TCC/TCC.db" "$SQL"
+          native/mori-sysaudio/build/mori-sysaudio --seconds 9 > "$R/refused.pcm" 2> "$R/refused.log" &
+          H=$!
+          ( sleep 20; kill -9 $H 2>/dev/null ) &
+          sleep 2
+          afplay "$R/speech.wav"
+          wait $H || true
+          cat "$R/refused.log"
+          .venv/bin/python native/mori-sysaudio/ci_check.py "$R/refused.pcm" meeting thursday slides | tee "$R/refused.json" || true
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### The other side of the call on macOS"
+            for f in before helper others you refused; do
+              [ -f "$R/$f.json" ] && { echo "**$f**"; echo '```json'; cat "$R/$f.json"; echo '```'; }
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-audio-results
+          path: ${{ runner.temp }}/results
+          retention-days: 14
