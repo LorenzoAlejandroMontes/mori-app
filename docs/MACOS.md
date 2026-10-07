@@ -90,16 +90,25 @@ Seen in the same workflow, on the app taken from the `.dmg`:
   the menu behind the menu bar icon in English with `⇧⌘R`.
 - **Cmd+Q during a call.** A second recording is ended with `Cmd+Q`: the
   recorder closes its file, the call is saved, Mori quits, and no recorder or
-  helper process is left. It passed in 3 runs and failed in 1, where Mori was
-  still open a minute later while the first call was being transcribed; the
-  cause is not known, and the step now samples the process if it happens again.
+  helper process is left. In 2 of the first 5 runs the call was saved but Mori
+  was still open a minute later: a sample of the process showed the main
+  thread inside Tauri's own exit, waiting in a plugin's exit handler. The quit
+  command now ends the process three seconds after asking Tauri to exit; the
+  one run since then passed.
+- **The transcript.** With no key, as on a new install, the app transcribes
+  the call it recorded with the local Whisper (`large-v3-turbo`, downloaded the
+  first time): the played sentence is in Mori's database under two minutes
+  after the recording stops. The first attempts failed, and the call
+  page said so: a fresh environment got `av` 19, which the current
+  faster-whisper cannot use. `requirements.txt` now keeps `av` below 19.
 - **Without the helper.** A copy of the app with the helper removed, then the
   real app with the helper killed two seconds into a recording: in both the
   recorder writes `sys: mori-sysaudio not found` or `sys: mori-sysaudio stopped`
   in the levels the interface reads, exits normally, and the microphone file
   is a valid recording of the whole time.
 
-Not seen: the floating pill, the warning as a person reads it in the
+Not seen: the floating pill, the transcript on the call's page (the
+screenshot was taken too early), the warning as a person reads it in the
 interface, and the setup on a slow or absent network (the strip offers "Try
 again"; its two states were looked at in the preview bench, not on a Mac).
 
