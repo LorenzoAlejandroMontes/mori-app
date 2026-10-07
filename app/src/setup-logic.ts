@@ -20,15 +20,15 @@ export function setupFraction(stage: SetupStage): number {
   return (SETUP_STAGES.indexOf(stage) + 0.5) / SETUP_STAGES.length;
 }
 
-/** "2 di 3 · installo audio e trascrizione": where it is, in words. */
+/** "2 di 3 · audio e trascrizione": where it is, in words. */
 export function setupLine(stage: SetupStage): string {
   const n = SETUP_STAGES.indexOf(stage) + 1;
   const what =
     stage === "python"
       ? t("scarico Python")
       : stage === "packages"
-        ? t("installo audio e trascrizione")
-        : t("controllo che tutto funzioni");
+        ? t("audio e trascrizione")
+        : t("controllo finale");
   return t("{n} di {total} · {what}", { n, total: SETUP_STAGES.length, what });
 }
 

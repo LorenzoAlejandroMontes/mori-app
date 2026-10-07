@@ -1363,10 +1363,10 @@ function setupChecks({ mods }) {
   section("30 · la prima apertura si prepara da sola, e dice a che punto è");
   i18n.useLangNow("en");
   eq("primo passo", sl.setupLine("python"), "1 of 3 · downloading Python");
-  eq("secondo passo", sl.setupLine("packages"), "2 of 3 · installing audio and transcription");
-  eq("terzo passo", sl.setupLine("check"), "3 of 3 · checking that everything works");
+  eq("secondo passo", sl.setupLine("packages"), "2 of 3 · audio and transcription");
+  eq("terzo passo", sl.setupLine("check"), "3 of 3 · final check");
   i18n.useLangNow("it");
-  eq("in italiano", sl.setupLine("packages"), "2 di 3 · installo audio e trascrizione");
+  eq("in italiano", sl.setupLine("packages"), "2 di 3 · audio e trascrizione");
   check("la linea avanza a ogni passo", sl.setupFraction("python") < sl.setupFraction("packages") && sl.setupFraction("packages") < sl.setupFraction("check"));
   check("e non è mai piena prima della fine", sl.setupFraction("check") < 1);
   eq("un passo sconosciuto non rompe niente", sl.parseStage("altro"), null);

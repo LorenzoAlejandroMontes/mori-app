@@ -67,7 +67,7 @@ export function SetupStrip({ setup, onRetry }: { setup: SetupState; onRetry: () 
         <span className="tr-strip-top">
           <span className="spinner sm" aria-hidden="true" />
           <span className="tr-strip-title">
-            <b>{t("Preparo Mori")}</b> {t("per la prima call")}
+            <b>{t("Preparo Mori")}</b>
           </span>
         </span>
         <ProgressLine fraction={setupFraction(setup.stage)} />

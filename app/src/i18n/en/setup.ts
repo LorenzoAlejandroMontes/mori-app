@@ -2,11 +2,10 @@
 // not transcribe and the local Whisper did.
 export default {
   "Preparo Mori": "Getting Mori ready",
-  "per la prima call": "for your first call",
   "{n} di {total} · {what}": "{n} of {total} · {what}",
   "scarico Python": "downloading Python",
-  "installo audio e trascrizione": "installing audio and transcription",
-  "controllo che tutto funzioni": "checking that everything works",
+  "audio e trascrizione": "audio and transcription",
+  "controllo finale": "final check",
   "La preparazione si è fermata": "Setup stopped before the end",
   "Controlla la connessione e riprova.": "Check your connection and try again.",
   "Ancora un momento: sto preparando la registrazione.": "One more moment: recording is still being set up.",

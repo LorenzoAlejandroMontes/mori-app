@@ -177,10 +177,12 @@ jobs:
           open --env PATH=/usr/bin:/bin:/usr/sbin:/sbin --stdout "$R/app.out" --stderr "$R/app.err" "$APP"
           PYV="$HOME/.mori/venv/bin/python"
           SHOT=0
-          for i in $(seq 1 200); do
-            if [ $((i % 3)) -eq 0 ] && [ $SHOT -lt 12 ]; then SHOT=$((SHOT + 1)); screencapture -x "$R/setup_$SHOT.png"; fi
+          # A screenshot a second while it works: on this network the whole
+          # setup takes a few seconds.
+          for i in $(seq 1 400); do
+            if [ -f "$HOME/.mori/setup.log" ] && [ $SHOT -lt 20 ]; then SHOT=$((SHOT + 1)); screencapture -x "$R/setup_$SHOT.png"; fi
             if grep -q "^## check" "$HOME/.mori/setup.log" 2>/dev/null && "$PYV" -c "import soundcard, numpy, faster_whisper" 2>/dev/null; then break; fi
-            sleep 2
+            sleep 1
           done
           echo "## what the app could see"
           PID=$(pgrep -f "Mori.app/Contents/MacOS/mori$" | head -1)

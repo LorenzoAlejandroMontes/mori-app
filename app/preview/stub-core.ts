@@ -13,6 +13,15 @@ const COMMANDS: Record<string, (args?: Record<string, unknown>) => unknown> = {
   // ?call=1: a Meet window is in front, so "Looks like a call" shows up.
   foreground_window_title: () => (params.get("call") === "1" ? "Weekly meeting - Google Meet" : ""),
   companion_tray_ready: () => true,
+  // ?setup=1: a packaged Mori on its first launch, preparing its Python (it
+  // stays on the second step so it can be looked at); ?setup=fail: it stopped.
+  python_env_status: () => ({ ready: !params.get("setup"), can_prepare: true }),
+  prepare_python_env: async () => {
+    await new Promise((r) => setTimeout(r, 600));
+    if (params.get("setup") === "fail") throw new Error("packages: exit status: 2. error: Failed to fetch");
+    setupListeners.forEach((cb) => cb({ payload: { stage: "packages" } }));
+    await new Promise(() => {});
+  },
   // Recording works on the bench (nothing is captured): the UI can be looked at
   // while it records. ?silence=1 makes the recorder report a long silence, so the
   // auto-stop countdown shows up a few seconds after starting.
@@ -82,7 +91,10 @@ export function convertFileSrc(p: string): string {
 
 // `listen` delivers a fake pill at once, chosen with
 // ?pill=started|stopped|silence|status|transcribing|understanding, so every state can be looked at.
+const setupListeners: ((e: { payload: unknown }) => void)[] = [];
+
 export async function listen(ev: string, cb: (e: { payload: unknown }) => void): Promise<() => void> {
+  if (ev === "setup://progress") setupListeners.push(cb);
   if (ev === "companion://pill") {
     const kind = new URLSearchParams(location.search).get("pill") ?? "started";
     const payloads: Record<string, unknown> = {
