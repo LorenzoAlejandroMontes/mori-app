@@ -139,8 +139,21 @@ notarize() {
     rm -rf "$TMP/$name"
 }
 
-sign sjs-app
-notarize notarize-app
-sign sjs-dmg
-notarize notarize-dmg
+# With only the run id, the four steps in order. With step names after it, only those: for
+# example `sign-owner.sh <run id> notarize-dmg` after a network drop in the last step.
+if [ "$#" -gt 1 ]; then
+    shift
+    for step in "$@"; do
+        case "$step" in
+            sjs-app|sjs-dmg) sign "$step" ;;
+            notarize-app|notarize-dmg) notarize "$step" ;;
+            *) die "unknown step: $step (sjs-app, notarize-app, sjs-dmg, notarize-dmg)" ;;
+        esac
+    done
+else
+    sign sjs-app
+    notarize notarize-app
+    sign sjs-dmg
+    notarize notarize-dmg
+fi
 say "done here. The run now staples the .dmg and proves the app: https://github.com/$REPO/actions/runs/$RUN"

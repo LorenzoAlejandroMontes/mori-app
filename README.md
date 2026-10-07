@@ -2,26 +2,26 @@
 
 [![CI](https://github.com/LorenzoAlejandroMontes/mori-app/actions/workflows/ci.yml/badge.svg)](https://github.com/LorenzoAlejandroMontes/mori-app/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**Mori remembers your calls for you.** It listens to your meetings (you on the mic, everyone else from the computer's audio), transcribes them, and turns them into what you actually need afterwards: a summary, the decisions, who promised what by when: and answers to "what did we agree with Marco?", with the call it comes from one click away.
+**Mori remembers your calls for you.** It listens to your meetings (you on the mic, everyone else from the computer's audio), transcribes them, and turns them into what you actually need afterwards: a summary, the decisions, who promised what by when, and answers to "what did we agree with Marco?", with the call it comes from one click away.
 
-> 🇮🇹 Mori è un compagno per le tue call: registra, trascrive sul tuo PC, ricorda persone, decisioni e cose da fare, e risponde citando la call giusta. L'interfaccia è in italiano. Il resto di questo README è in inglese per chi vuole contribuire.
+> 🇮🇹 Mori è un compagno per le tue call: registra, trascrive, ricorda persone, decisioni e cose da fare, e risponde citando la call giusta. L'interfaccia è in inglese o in italiano, a scelta.
 
 ![Today: the page Mori opens on](docs/screenshots/today.png)
 
 ## What it does
 
 - **Records any call**: Meet, Zoom, Teams, a phone on speaker: from a global hotkey or the tray, without joining as a bot. Your voice and the others' are kept on separate channels, so the transcript knows who said what.
-- **Transcribes locally** with Whisper (`large-v3-turbo`, greedy decoding, batched on 8+ cores), in the background, at idle priority, and shows it happening: a line that fills, the percentage and the time left, in the sidebar, on the call and in the always-on-top pill. **By default, in seconds and for free** with Groq's `whisper-large-v3-turbo` (the same key as the model): only the *speech* leaves the PC (silence is cut locally), never for a private call, and it falls back to the local Whisper without a key or on any error. One click in *Impostazioni → Trascrizione* keeps everything on the PC.
-- **Doesn't hoard audio**: by default the recording is deleted as soon as the transcript is safely saved. Keep it on the PC, or in a folder you choose (OneDrive/Google Drive with files on demand), if you want to replay lines; *Libera spazio* clears what was kept before.
-- **Says where it is and when it's done**: after the words, "Capisco" (which part of a long call, or how many seconds the free tier asks to wait), then *“Sync prodotto” is ready · 3 to-dos · Open*, as a toast in Mori or in the pill when Mori is behind. On Groq the pieces of a long call go to `gpt-oss-20b` (its own per-minute budget, twice as fast), the final pass to the model you chose.
-- **Understands the call**: summary, decisions with figures, action items with *real* due dates ("giovedì" said on a Monday becomes a date), commitments and durable facts about people and projects. A 90‑minute call is not squeezed into five bullet points.
-- **"Oggi"**: the page it opens on: what is yours and due (late first), what others owe you, the calls still to be understood, and questions worth one click, built from your own archive.
+- **Transcribes locally** with Whisper (`large-v3-turbo`, greedy decoding, batched on 8+ cores), in the background, at idle priority, and shows it happening: a line that fills, the percentage and the time left, in the sidebar, on the call and in the always-on-top pill. **By default, in seconds and for free** with Groq's `whisper-large-v3-turbo` (the same key as the model): only the *speech* leaves the PC (silence is cut locally), never for a private call, and it falls back to the local Whisper without a key or on any error. One click in *Settings → Transcription* keeps everything on the PC.
+- **Doesn't hoard audio**: by default the recording is deleted as soon as the transcript is safely saved. Keep it on the PC, or in a folder you choose (OneDrive/Google Drive with files on demand), if you want to replay lines; *Free up space* clears what was kept before.
+- **Says where it is and when it's done**: after the words, "Understanding" (which part of a long call, or how many seconds the free tier asks to wait), then *“Product sync” is ready · 3 to-dos · Open*, as a toast in Mori or in the pill when Mori is behind. On Groq the pieces of a long call go to `gpt-oss-20b` (its own per-minute budget, twice as fast), the final pass to the model you chose.
+- **Understands the call**: summary, decisions with figures, action items with *real* due dates ("Thursday" said on a Monday becomes a date), commitments and durable facts about people and projects. A 90‑minute call is not squeezed into five bullet points.
+- **Today**, the page it opens on: what is yours and due (late first), what others owe you, the calls still to be understood, and questions worth one click, built from your own archive.
 - **Ask Mori**: hybrid recall (BM25 + local embeddings, fused) over every call, answers streamed as they are written, with citations that open the call at the right minute.
 - **Find what was said**: ⌘K searches every transcript for a phrase (accents and case don't matter) and opens the call at that second. Tell Mori who "the other voice" was and the name is used everywhere: transcript, search, recall, summaries.
 - **Before and after a call**: a brief on the person you are about to meet ("last time you agreed…"), and a follow-up email drafted from the extracted facts: ready to paste, never sent by Mori.
 - **Italian or English**, following the system or your choice: the interface, and what the model writes for you (summaries, to-dos, answers, emails).
-- **Light or dark**, following Windows or your choice: both WCAG AA, checked on every screen.
-- **Made for the keyboard**: ⌘K reaches every call, sentence, person, section and setting; `Ctrl 1…5` jump between sections, `J`/`K` between calls, `?` shows every shortcut. Deleting asks nothing: it offers **Annulla**.
+- **Light or dark**, following the system or your choice: both WCAG AA, checked on every screen.
+- **Made for the keyboard**: ⌘K reaches every call, sentence, person, section and setting; `Ctrl 1…5` jump between sections, `J`/`K` between calls, `?` shows every shortcut. Deleting asks nothing: it offers **Undo**.
 - **Tells you during the call if a side goes dead**: the two-voices wave follows the real levels of your mic and of the PC's audio, and "I can't hear the other side" / "I can't hear you" / "the microphone stopped" shows up in the recorder (and the pill) while there is still time to fix it.
 - **One place to see it's recording**: the control at the top of the sidebar (with the two voices, teal and violet) or, with Mori behind other windows, a small always-on-top pill.
 - **Yours, in plain files**: copy any call as Markdown, export the whole archive to `.md`, daily verified database snapshots, an optional second backup folder (e.g. one synced by OneDrive).
@@ -39,7 +39,7 @@
 | Platform | Status |
 |---|---|
 | **Windows** | Works today. This is where Mori is used every day. |
-| **macOS** | In progress (Apple Silicon, macOS 14.2+). Proven on GitHub's cloud Mac (macOS 26, Apple Silicon), from source and in the packaged app: CI builds a `.dmg`, opens the app from it, the app prepares its own Python, records both sides of a played call and transcribes it. Still to come: someone using it on a Mac on their desk. The plan and where to help: [`docs/MACOS.md`](docs/MACOS.md). |
+| **macOS** | Apple Silicon, macOS 14.2+. The download is signed and notarized. Every release is proven on GitHub's cloud Mac (macOS 26): the app is taken out of the `.dmg`, prepares its own Python, records both sides of a played call and transcribes it. Still to come: someone using it on a Mac on their desk. Where to help: [`docs/MACOS.md`](docs/MACOS.md). |
 | Linux | The app builds and the checks run in CI. Untested beyond that. |
 
 ## Install
@@ -67,7 +67,7 @@ The model is any OpenAI‑compatible endpoint: Groq (free tier, no training on y
 ## How it works
 
 ```
- record.py ──► transcribe*.py ──► organize ──► index ──► recall / Oggi / brief
+ record.py ──► transcribe*.py ──► organize ──► index ──► recall / Today / brief
  (mic + loopback)  (Whisper, local)  (LLM, JSON)  (chunks + local embeddings)
         ▲                 └──────── durable job queue (SQLite) ────────┘
    Tauri (Rust): spawns the Python sidecars at idle priority, tray, hotkey, pill window
@@ -95,7 +95,7 @@ pnpm tauri dev                    # run (installs missing dependencies first)
 pnpm tauri build --no-bundle      # a standalone exe in src-tauri/target/release
 ```
 
-Then open *Impostazioni → Modello* (`Ctrl ,`), pick a preset (Groq, OpenAI, OpenRouter, Ollama, LM Studio) and press **Verifica**.
+Then open *Settings → Model* (`Ctrl ,`), pick a preset (Groq, OpenAI, OpenRouter, Ollama, LM Studio) and press **Test**.
 
 Everything Mori keeps lives in `~/.mori`: `mori.db`, `audio/`, `backups/`, `export/`, `models/`.
 
@@ -104,7 +104,7 @@ Everything Mori keeps lives in `~/.mori`: `mori.db`, `audio/`, `backups/`, `expo
 ```bash
 cd app
 pnpm exec tsc --noEmit -p tsconfig.json   # types
-node scripts/checks.mjs                   # ~200 checks: the REAL modules against the REAL schema on a throwaway SQLite
+node scripts/checks.mjs                   # ~340 checks: the REAL modules against the REAL schema on a throwaway SQLite
 node tests/todo-logic.test.ts && node tests/companion-logic.test.ts
 node scripts/contrast.mjs                 # every color pair of the design tokens, WCAG AA, light and dark
 cd src-tauri && cargo test --locked       # Rust
