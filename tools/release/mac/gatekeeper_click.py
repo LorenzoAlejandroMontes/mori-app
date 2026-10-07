@@ -6,6 +6,11 @@ the project this file comes from ("Can't make ... entire contents ... into type 
 the button, then on the place where the button sits in the window. Prints everything it saw.
 
     python gatekeeper_click.py            # exit 0 = the question is gone, 1 = still there, 2 = never seen
+    python gatekeeper_click.py --state    # exit 0 = a window of Mori is on screen and no question is,
+                                          #      1 = no window of Mori, 3 = a window of Mori and a question
+
+A process called mori proves nothing: macOS starts it and holds it while "Not Opened" is on
+screen (seen in Release run 37695803034, macOS 26.6.2). Only a window says the app opened.
 """
 import sys
 import time
@@ -32,6 +37,39 @@ def windows():
         out.append({"pid": int(w.get("kCGWindowOwnerPID")), "layer": int(w.get("kCGWindowLayer", 0)),
                     "x": float(b["X"]), "y": float(b["Y"]), "w": float(b["Width"]), "h": float(b["Height"])})
     return out
+
+
+def app_windows(name="mori"):
+    """On-screen, ordinary windows of the app, big enough to be its main window."""
+    out = []
+    opts = Quartz.kCGWindowListOptionOnScreenOnly | Quartz.kCGWindowListExcludeDesktopElements
+    for w in Quartz.CGWindowListCopyWindowInfo(opts, Quartz.kCGNullWindowID) or []:
+        b = w.get("kCGWindowBounds") or {}
+        if str(w.get("kCGWindowOwnerName") or "").lower() != name or int(w.get("kCGWindowLayer", 0)) != 0:
+            continue
+        if b.get("Width", 0) < 300 or b.get("Height", 0) < 200:
+            continue
+        out.append({"pid": int(w.get("kCGWindowOwnerPID")), "w": float(b["Width"]), "h": float(b["Height"])})
+    return out
+
+
+def state(wait=20.0):
+    end = time.time() + wait
+    while True:
+        mine, question = app_windows(), windows()
+        if (mine and not question) or time.time() >= end:
+            break
+        time.sleep(1)
+    print(f"windows of Mori: {mine}")
+    print(f"windows of {OWNER}: {question}")
+    if not mine:
+        print("RESULT no window of Mori on screen")
+        return 1
+    if question:
+        print("RESULT a window of Mori, and a question still on screen")
+        return 3
+    print("RESULT Mori is open: its window is on screen and no question is")
+    return 0
 
 
 def click(x, y):
@@ -141,4 +179,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(state() if "--state" in sys.argv[1:] else main())
