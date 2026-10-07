@@ -39,10 +39,17 @@
 | Platform | Status |
 |---|---|
 | **Windows** | Works today. This is where Mori is used every day. |
-| **macOS** | In progress. The app builds and the checks run in CI; hearing the other side of a call is the missing piece. The plan and where to help: [`docs/MACOS.md`](docs/MACOS.md). |
+| **macOS** | In progress (Apple Silicon, macOS 14.2+). CI builds a `.dmg`, opens the app from it, and it records both sides of a played call; nobody has run it on a real Mac yet. The plan and where to help: [`docs/MACOS.md`](docs/MACOS.md). |
 | Linux | The app builds and the checks run in CI. Untested beyond that. |
 
-There is no installer yet: you run Mori from source (below). A one-click installer is the next step on desktop.
+## Install
+
+There is no published release yet. The [Release workflow](.github/workflows/release.yml) builds the two files a release will carry, and each run keeps them for 14 days as artifacts (open the latest run under Actions → Release; downloading artifacts needs a GitHub account):
+
+- **Windows**: `Mori_<version>_x64-setup.exe`, an installer for the current user.
+- **macOS, Apple Silicon**: `Mori_<version>_aarch64.dmg`. It is not signed with an Apple Developer ID yet, so a downloaded copy opens through *System Settings → Privacy & Security → Open Anyway*.
+
+You do not need to install Python: on first launch Mori downloads its own into `~/.mori` (about 300 MB with the audio and transcription libraries, once) and says how far it is under the record button. The other way is to run Mori from source (below).
 
 ## Privacy, by construction
 
@@ -69,7 +76,7 @@ The model is any OpenAI‑compatible endpoint: Groq (free tier, no training on y
 - **Shell**: Tauri v2 (Rust): `app/src-tauri`. Every command that does real work runs off the UI thread.
 - **App**: React + TypeScript: `app/src`. State lives in SQLite through `@tauri-apps/plugin-sql`; numbered migrations in `app/src-tauri/migrations`.
 - **Sidecars**: Python: `app/scripts` (`record.py`, `transcribe*.py`, `embed.py`, `toflac.py`).
-- **Pipeline**: every step (transcribe → organize → index → compress) is a row in a durable job queue: it survives a crash or a closed app, retries with backoff, and a failure shows a *Riprova* button instead of being lost.
+- **Pipeline**: every step (transcribe → organize → index → compress) is a row in a durable job queue: it survives a crash or a closed app, retries with backoff, and a failure shows a *Try again* button instead of being lost.
 
 ## Getting started (development)
 
