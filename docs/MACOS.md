@@ -28,9 +28,9 @@ Meetily, both MIT) capture this way. Mori's helper is one Swift file with no
 dependencies: `bash app/native/mori-sysaudio/build.sh` builds it with the Xcode
 command line tools.
 
-If the permission is refused, macOS hands the helper silence, not an error
-(measured in the same workflow): Mori's "one side is silent" warning is what
-tells the user.
+What a refused permission looks like is not settled. In CI, switching the
+stored answer to "no" gave silence in one run and normal audio in two, so the
+workflow cannot tell yet; it needs someone to click "Don't Allow" on a real Mac.
 
 First target: Apple Silicon, macOS 14.2 or later.
 
