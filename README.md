@@ -1,5 +1,7 @@
 # Mori
 
+[![CI](https://github.com/LorenzoAlejandroMontes/mori-app/actions/workflows/ci.yml/badge.svg)](https://github.com/LorenzoAlejandroMontes/mori-app/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 **Mori remembers your calls for you.** It listens to your meetings (you on the mic, everyone else from the computer's audio), transcribes them, and turns them into what you actually need afterwards: a summary, the decisions, who promised what by when: and answers to "what did we agree with Marco?", with the call it comes from one click away.
 
 > 🇮🇹 Mori è un compagno per le tue call: registra, trascrive sul tuo PC, ricorda persone, decisioni e cose da fare, e risponde citando la call giusta. L'interfaccia è in italiano. Il resto di questo README è in inglese per chi vuole contribuire.
