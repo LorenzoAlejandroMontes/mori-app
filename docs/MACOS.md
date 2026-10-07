@@ -1,9 +1,11 @@
 # Mori on macOS
 
 Status: **in progress, looking for help.** Mori is used every day on Windows.
-On a Mac the app compiles, records your microphone and does everything that
-comes after (transcript, summary, to-dos, Ask Mori). What is missing is the
-other side of the call. This page is the plan. The research behind it, with
+On a Mac the app compiles and passes its tests, and the recorder captures both
+sides of a call: on every change, a GitHub Mac plays a known sentence and checks
+that Mori's "others" channel contains it, transcribed
+([workflow](../.github/workflows/macos-audio.yml)). What is missing is a
+downloadable app. This page is the plan. The research behind it, with
 sources for every claim, is in [`research/macos.md`](research/macos.md).
 
 The maintainer has no Mac. Milestones marked **CI** can be proven by GitHub
@@ -24,17 +26,21 @@ Meetily, both MIT) capture this way. Mori's helper is one Swift file with no
 dependencies: `bash app/native/mori-sysaudio/build.sh` builds it with the Xcode
 command line tools.
 
+If the permission is refused, macOS hands the helper silence, not an error
+(measured in the same workflow): Mori's "one side is silent" warning is what
+tells the user.
+
 First target: Apple Silicon, macOS 14.2 or later.
 
 ## Milestones
 
 | # | Milestone | Done when | Proven by |
 |---|---|---|---|
-| M0 | **macOS in CI** | A `macos-latest` job is green: types, checks, Rust tests, and every Python dependency resolves to a macOS wheel | CI |
+| M0 ✅ | **macOS in CI** | A `macos-latest` job is green: types, checks, Rust tests, and every Python dependency resolves to a macOS wheel | CI |
 | M1 | **A Mac app comes out of CI** | The workflow uploads a `.dmg`; its `Info.plist` carries the microphone and audio-capture descriptions | CI |
 | M2 | **It feels like a Mac app** | `Cmd` in every shortcut label, the global hotkey works with another app in front, the tray icon and the floating pill look right | Mac |
 | M3 | **Microphone recording** | A 10 s recording becomes a call with the right transcript, and Mori says plainly that the other side is not captured yet | Mac |
-| M4 | **The other side** | With a known speech file playing, the "others" channel contains it and its transcript matches; no Screen Recording prompt appeared; denying the permission shows a clear message | Mac |
+| M4 | **The other side** | With a known speech file playing, the "others" channel contains it and its transcript matches (✅ from source, in CI); no Screen Recording prompt appeared; denying the permission shows a clear message (still to see in the packaged app) | CI, then Mac |
 | M5 | **No Python to install** | On a machine with no Python, first launch prepares everything by itself (bundled `uv`, environment in `~/.mori/venv`), on macOS and on Windows | CI, then Mac |
 | M6 | **Download and run** | A tag produces a release with a `.dmg` and a Windows installer | CI, then Mac |
 | M7 | **No warning on first open** | The app is signed with a Developer ID and notarized from CI | CI |
