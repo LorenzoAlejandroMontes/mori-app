@@ -48,7 +48,6 @@ jobs:
         working-directory: app
     env:
       SIGNER: ${{ github.workspace }}/tools/release/mac/remote_sign.sh
-      RESULTS: ${{ runner.temp }}/mac-results
     steps:
       - uses: actions/checkout@v4
 
@@ -83,6 +82,8 @@ jobs:
           DMG=$(ls "$PWD"/src-tauri/target/release/bundle/dmg/*.dmg | head -1)
           echo "DMG=$DMG" >> "$GITHUB_ENV"
           echo "APP=$PWD/src-tauri/target/release/bundle/macos/Mori.app" >> "$GITHUB_ENV"
+          RESULTS="$RUNNER_TEMP/mac-results"
+          echo "RESULTS=$RESULTS" >> "$GITHUB_ENV"
           mkdir -p "$RESULTS"
           ls -l "$DMG"
 
