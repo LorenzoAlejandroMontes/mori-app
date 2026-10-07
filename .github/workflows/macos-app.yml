@@ -165,6 +165,32 @@ jobs:
           echo "## system"; sudo sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" "$SQL" | tee "$R/tcc_system.txt"
           echo "## user"; sqlite3 "$HOME/Library/Application Support/com.apple.TCC/TCC.db" "$SQL" | tee "$R/tcc_user.txt"
 
+      # Why the entitlement: the recorder inside the app, pointed at the same
+      # helper signed three ways, while the sentence plays. Informational.
+      - name: The helper under three signatures
+        continue-on-error: true
+        run: |
+          D="$RUNNER_TEMP/sig"; mkdir -p "$D"
+          for v in plain runtime runtime_entitled; do cp "$APP/Contents/MacOS/mori-sysaudio" "$D/$v"; done
+          codesign --force --sign - "$D/plain"
+          codesign --force --sign - --options runtime "$D/runtime"
+          codesign --force --sign - --options runtime --entitlements src-tauri/Entitlements.plist "$D/runtime_entitled"
+          for v in plain runtime runtime_entitled plain runtime; do
+            echo "## $v"
+            codesign -dvv "$D/$v" 2>&1 | grep CodeDirectory
+            OUT="$R/sig_$v.wav"; STOP="$R/sig_$v.stop"; rm -f "$OUT"* "$STOP"
+            (cd "$RUNNER_TEMP" && MORI_SYSAUDIO="$D/$v" "$PY" "$APP/Contents/Resources/scripts/record.py" "$OUT" "$STOP" 60) &
+            P=$!
+            for i in $(seq 1 100); do [ -f "$OUT.started" ] && break; sleep 0.2; done
+            sleep 2
+            pgrep -fl "$D/$v" || true
+            afplay "$R/speech.wav"
+            sleep 2
+            touch "$STOP"
+            wait $P || echo "recorder exit code $?"
+            "$PY" native/mori-sysaudio/ci_check.py "$OUT.sys.wav" meeting thursday slides || true
+          done
+
       # The recorder and the helper are the ones inside the app. No environment
       # variable tells record.py where the helper is: it has to find it.
       - name: The recorder inside the app hears the other side
@@ -196,30 +222,6 @@ jobs:
           killall tccd || true
           sleep 2
           attempt 2
-
-      # Why the entitlement: the same helper, signed three ways, while the
-      # sentence plays. The last line of each is what it heard (rms, peak).
-      - name: The helper under three signatures
-        if: always()
-        continue-on-error: true
-        run: |
-          D="$RUNNER_TEMP/sig"; mkdir -p "$D"
-          cp "$APP/Contents/MacOS/mori-sysaudio" "$D/plain"
-          cp "$APP/Contents/MacOS/mori-sysaudio" "$D/runtime"
-          cp "$APP/Contents/MacOS/mori-sysaudio" "$D/runtime_entitled"
-          codesign --force --sign - "$D/plain"
-          codesign --force --sign - --options runtime "$D/runtime"
-          codesign --force --sign - --options runtime --entitlements src-tauri/Entitlements.plist "$D/runtime_entitled"
-          for v in plain runtime runtime_entitled; do
-            echo "## $v"
-            codesign -dvv "$D/$v" 2>&1 | grep CodeDirectory
-            "$D/$v" --seconds 9 --start-timeout 12 > "$R/sig_$v.pcm" 2> "$R/sig_$v.log" &
-            H=$!
-            sleep 2
-            afplay "$R/speech.wav"
-            wait $H || echo "helper exit code $?"
-            cat "$R/sig_$v.log"
-          done
 
       # The whole app, as a user would run it: opened from Finder's point of
       # view, started and stopped with the global shortcut. This step reports;
