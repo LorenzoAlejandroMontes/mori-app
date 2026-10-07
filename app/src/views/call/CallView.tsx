@@ -6,7 +6,7 @@ import type { ActionItem, Category, CategoryCount } from "../../db";
 import type { SessionJob } from "../../jobs";
 import { jobLabel, isWaitingNotice, noticeText, retrySession } from "../../jobs";
 import type { Entity } from "../people";
-import { applySpeakerMap, otherLabelsIn, relabelText } from "../../speakers-logic";
+import { applySpeakerMap, otherLabelsIn, relabelText, speakerLabel } from "../../speakers-logic";
 import Markdown from "../../ui/Markdown";
 import Dragon from "../../ui/Mark";
 import Menu from "../../ui/Menu";
@@ -281,7 +281,7 @@ export default function CallView({
                         title={t("Apri la scheda di {name}", { name: p.display_name })}
                         onClick={() => onOpenPersonByName(p.display_name)}
                       >
-                        {p.display_name}
+                        {speakerLabel(p.display_name)}
                       </button>
                       {p.organization ? ` (${p.organization})` : ""}
                     </span>

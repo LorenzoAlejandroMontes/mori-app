@@ -372,8 +372,10 @@ jobs:
           done
           echo "## what Mori wrote down"
           cat "$R/transcript_in_app.txt"
+          # The page follows the queue: give the job a moment to close before looking.
+          for i in $(seq 1 30); do sqlite3 "$HOME/.mori/mori.db" "select status from job where kind = 'transcribe'" | grep -q running || break; sleep 2; done
           sqlite3 "$HOME/.mori/mori.db" "select kind, status, attempts, coalesce(last_error, '') from job" | tee "$R/jobs_in_app.txt" || true
-          sleep 3
+          sleep 4
           screencapture -x "$R/app_transcribed.png"
           grep -qi "thursday" "$R/transcript_in_app.txt" || { echo "the transcript did not arrive"; ls -la "$HOME/.mori" "$HOME/.cache/huggingface/hub" 2>/dev/null || true; exit 1; }
           grep -qi "slides" "$R/transcript_in_app.txt" || { echo "the transcript is not the sentence that was played"; exit 1; }
