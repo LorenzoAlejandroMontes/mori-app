@@ -402,8 +402,8 @@ async function main() {
     [nowIso()],
   );
   const rt = await recall.retrieve("cosa devo fare?");
-  check("quella della call c'è, con la call", rt.context.includes("Mandare il preventivo ad Andrew") && rt.context.includes("— da: Call con Andrew"));
-  check("quella scritta a mano c'è, come tua", /- Rinnovare il dominio — aggiunta da te/.test(rt.context));
+  check("quella della call c'è, con la call", rt.context.includes("Mandare il preventivo ad Andrew") && rt.context.includes(", da: Call con Andrew"));
+  check("quella scritta a mano c'è, come tua", /- Rinnovare il dominio, aggiunta da te/.test(rt.context));
   check("quella chiusa a mano no", !rt.context.includes("Cosa gia chiusa a mano"));
 
   // =========================================================================
@@ -490,6 +490,7 @@ async function main() {
   liveChannelChecks({ mods });
   platformChecks({ mods });
   englishChecks({ mods });
+  dashChecks();
   setupChecks({ mods });
 
   // =========================================================================
@@ -532,12 +533,12 @@ async function main() {
     check("sotto il tetto", r1.context.length <= 12000 && r2.context.length <= 12000);
     check("le cose da fare ci sono", r1.context.includes("[Cose da fare ancora aperte]"));
     check("le cose da fare vengono prima", r1.context.indexOf("[Cose da fare") === 0);
-    check("con la call di origine", /— da: /.test(r1.context));
-    check("con quella scritta a mano", r1.context.includes("- Rinnovare il dominio di Mori — aggiunta da te"));
+    check("con la call di origine", /, da: /.test(r1.context));
+    check("con quella scritta a mano", r1.context.includes("- Rinnovare il dominio di Mori, aggiunta da te"));
     const todoBlock = r1.context.split("\n\n")[0];
     if (process.env.MORI_CHECK_SHOW) console.log(todoBlock);
-    console.log(`  misura · righe nel blocco: ${(todoBlock.match(/— da: /g) ?? []).length} dalle call, ${(todoBlock.match(/— aggiunta da te/g) ?? []).length} a mano`);
-    check("i chunk di trascritto ci sono", /\[.+ — \d/.test(r2.context));
+    console.log(`  misura · righe nel blocco: ${(todoBlock.match(/, da: /g) ?? []).length} dalle call, ${(todoBlock.match(/, aggiunta da te/g) ?? []).length} a mano`);
+    check("i chunk di trascritto ci sono", /\[.+ · \d/.test(r2.context));
     await close2();
   }
 
@@ -702,7 +703,7 @@ async function privacyAndNewChecks({ mods, d, makeSession }) {
   section("12 · Markdown e citazioni");
   const srcs = [{ title: "Call" }, { title: "Call con Marco" }, { title: "Pricing del piano annuale" }];
   const blocks = md.parseMarkdown(
-    "## Decisioni\n- Prezzo a **39 €** [Pricing del piano annuale — ieri]\n- Vedi [Call con Marco — 19 ago 2026]\n\nTesto *corsivo* e `codice` e [link](https://x.y) e [x] e [Inventata — 1 gen].",
+    "## Decisioni\n- Prezzo a **39 €** [Pricing del piano annuale · ieri]\n- Vedi [Call con Marco \u2014 19 ago 2026]\n\nTesto *corsivo* e `codice` e [link](https://x.y) e [x] e [Inventata · 1 gen].",
     srcs,
   );
   eq("titolo, lista, paragrafo", blocks.map((b) => b.t).join(","), "h,ul,p");
@@ -748,7 +749,7 @@ async function privacyAndNewChecks({ mods, d, makeSession }) {
   const mdOut = ex.callToMarkdown(call);
   check("titolo in testa", mdOut.startsWith("# Kickoff: redesign/app\n"));
   check("i titoli della sintesi scendono di un livello", mdOut.includes("### Di cosa si è parlato"));
-  check("cose da fare come checklist", mdOut.includes("- [ ] Mandare il preventivo — Tu (entro 2026-09-18)") && mdOut.includes("- [x] Mockup — Giulia"));
+  check("cose da fare come checklist", mdOut.includes("- [ ] Mandare il preventivo (Tu, entro 2026-09-18)") && mdOut.includes("- [x] Mockup (Giulia)"));
   check("decisioni", mdOut.includes("## Decisioni\n- Budget 18.000 € (18.000 €)"));
   const taken = new Set();
   const n1 = ex.exportFileName(call, taken);
@@ -941,7 +942,7 @@ async function privacyAndNewChecks({ mods, d, makeSession }) {
   eq("un altro nome si salva come scritto", sp.assigneeStored("Sarah Lee"), "Sarah Lee");
   check("il da fare assegnato a You resta mio", mods["views/todo-logic"].isMine({ assignee: sp.assigneeStored("You"), text: "x", commitments: [] }));
   const mdYou = mods["export-logic"].callToMarkdown({ title: "x", startedAt: null, participants: ["Interlocutore"], categories: [], summary: "", actions: [{ text: "send the deck", assignee: "Tu", due: null, done: false }] });
-  check("la call esportata dice You, e non Interlocutore", mdYou.includes("send the deck — You") && !mdYou.includes("Interlocutore"), mdYou);
+  check("la call esportata dice You, e non Interlocutore", mdYou.includes("send the deck (You") && !mdYou.includes("Interlocutore"), mdYou);
   i18nSp.useLangNow("it");
   eq("in italiano resta Tu", sp.assigneeLabel("Tu, Sarah"), "Tu, Sarah");
   // No view puts a stored owner on screen without the translation: a line of
@@ -1387,6 +1388,59 @@ function englishChecks({ mods }) {
     // "Tu" / "Interlocutore" are stored labels, translated when shown.
     .filter((x) => x !== "Tu" && x !== "Interlocutore");
   eq("gli script Python parlano inglese", hits(py).join(" | "), "");
+}
+
+// No long dash in anything a person reads: the interface, the sample calls, what
+// the model is told (it writes back the way it is written to), the preview bench
+// the public screenshots are taken from, the README and the docs. Comments are
+// not read by anyone outside, so they are taken out before looking.
+function dashChecks() {
+  section("31 · nessun trattino lungo in ciò che si legge");
+  const DASH = "—";
+  const repo = path.resolve(appRoot, "..");
+  const walk = (dir, keep) =>
+    fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const f = path.join(dir, e.name);
+      if (e.isDirectory()) return ["node_modules", "target", "gen", "dist", ".git"].includes(e.name) ? [] : walk(f, keep);
+      return keep.test(e.name) ? [f] : [];
+    });
+  // Blank a comment but keep its line breaks, so a hit still names its line.
+  const blank = (text, re) => text.replace(re, (m) => m.replace(/[^\n]/g, " "));
+  const code = (text) => blank(blank(text, /\/\*[\s\S]*?\*\//g), /(^|\s)\/\/.*$/gm);
+  const strip = {
+    ".ts": code,
+    ".tsx": code,
+    ".mjs": code,
+    ".rs": code,
+    ".css": (x) => blank(x, /\/\*[\s\S]*?\*\//g),
+    ".html": (x) => blank(x, /<!--[\s\S]*?-->/g),
+    ".sql": (x) => blank(x, /^\s*--.*$/gm),
+    ".py": (x) => blank(blank(x, /"""[\s\S]*?"""/g), /(^|\s)#.*$/gm),
+    ".toml": (x) => blank(x, /(^|\s)#.*$/gm),
+    ".md": (x) => x,
+    ".json": (x) => x,
+  };
+  const files = [
+    ...walk(path.join(appRoot, "src"), /\.(ts|tsx|css)$/),
+    ...walk(path.join(appRoot, "src-tauri", "src"), /\.rs$/),
+    ...walk(path.join(appRoot, "src-tauri", "migrations"), /\.sql$/),
+    ...walk(path.join(appRoot, "src-tauri"), /^(Cargo\.toml|tauri.*\.json)$/).filter((f) => path.dirname(f) === path.join(appRoot, "src-tauri")),
+    ...walk(path.join(appRoot, "preview"), /\.(ts|tsx|html)$/),
+    ...walk(path.join(appRoot, "scripts"), /\.py$/),
+    path.join(appRoot, "index.html"),
+    ...walk(repo, /\.md$/),
+  ];
+  const hits = [];
+  for (const f of files) {
+    const text = strip[path.extname(f)](fs.readFileSync(f, "utf8"));
+    text.split(/\r?\n/).forEach((line, i) => {
+      if (line.includes(DASH)) hits.push(`${path.relative(repo, f).replace(/\\/g, "/")}:${i + 1}`);
+    });
+  }
+  check(`ne ho guardati ${files.length}`, files.length > 100, `solo ${files.length} file`);
+  eq("nessun trattino lungo fuori dai commenti", hits.join(" "), "");
+  // and the looking itself works: a string is seen, a comment is not
+  eq("una stringa si vede, un commento no", code(`const a = "x ${DASH} y"; // z ${DASH} w\n/* ${DASH} */`).split(DASH).length - 1, 1);
 }
 
 // First launch of a packaged Mori: what the strip under the recorder says.

@@ -307,9 +307,9 @@ function todoLines(todos: TodoRow[]): string {
   return todos
     .map((t) => {
       const who = t.assignee ? ` (${t.assignee})` : "";
-      const due = t.due_at ? ` — entro ${t.due_at}` : "";
+      const due = t.due_at ? `, entro ${t.due_at}` : "";
       const when = t.started_at ? ` (${fmtDate(t.started_at)})` : "";
-      const from = t.manual ? ` — aggiunta da te${when}` : ` — da: ${t.title}${when}`;
+      const from = t.manual ? `, aggiunta da te${when}` : `, da: ${t.title}${when}`;
       return `- ${t.text}${who}${due}${from}`;
     })
     .join("\n");
@@ -425,7 +425,7 @@ export async function retrieve(query: string, opts: RetrieveOptions = {}): Promi
     const facts: string[] = [];
     const src = (sid: string) => {
       const m = metaById.get(sid);
-      return m ? `[${m.title} — ${fmtDate(m.started_at)}]` : "";
+      return m ? `[${m.title} · ${fmtDate(m.started_at)}]` : "";
     };
     for (const c2 of commits) {
       if (facts.length >= 8) break;
@@ -446,7 +446,7 @@ export async function retrieve(query: string, opts: RetrieveOptions = {}): Promi
   const chunkBlocks: string[] = [];
   for (const sid of sessionOrder) {
     const m = metaById.get(sid);
-    const header = `[${m?.title ?? t("Call senza titolo")} — ${fmtDate(m?.started_at ?? null)}]`;
+    const header = `[${m?.title ?? t("Call senza titolo")} · ${fmtDate(m?.started_at ?? null)}]`;
     const rows = picked
       .filter((i) => c.chunks[i].session_id === sid)
       .map((i) => c.chunks[i])
@@ -566,7 +566,7 @@ async function retrieveFallback(
     .map((r) => {
       const summary = (r.docs ?? "").trim();
       const body = summary ? clip(summary, 1500) : clip((r.transcript ?? "").trim(), 1200);
-      return `[${r.title} — ${fmtDate(r.started_at)}]\n${body}`;
+      return `[${r.title} · ${fmtDate(r.started_at)}]\n${body}`;
     })
     .join("\n\n");
 

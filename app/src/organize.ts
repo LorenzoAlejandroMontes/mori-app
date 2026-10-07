@@ -173,7 +173,7 @@ Restituisci SOLO un JSON valido, senza testo attorno, con questa forma esatta:
 }
 
 Regole ferree: in italiano, concreto e sintetico. Estrai SOLO ciò che è realmente
-presente nel testo — MAI inventare nomi, date, numeri o impegni. Se una sezione non
+presente nel testo: MAI inventare nomi, date, numeri o impegni. Se una sezione non
 ha contenuto, usa lista vuota o ometti la sezione nel summary. Le trascrizioni possono
 avere errori: interpreta il senso, ma non aggiungere fatti non detti.
 CATEGORIE: massimo 1-2, AMPIE e riutilizzabili (temi, non etichette specifiche). MAI usare

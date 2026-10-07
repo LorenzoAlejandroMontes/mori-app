@@ -33,12 +33,13 @@ const norm = (s: string) =>
     .replace(/\s+/g, " ")
     .trim();
 
-/** Which source a citation label points at: "[Titolo — data]", "[Titolo]",
+/** Which source a citation label points at: "[Titolo · data]", "[Titolo]",
  *  or a title the model shortened. Null when nothing fits. */
 export function matchCitation(label: string, sources: CiteTarget[]): number | null {
   if (!sources.length) return null;
-  // The title is what comes before the " — date" (or " - date") tail.
-  const title = norm(label.split(/\s+[—–-]\s+/)[0] ?? label);
+  // The title is what comes before the " · date" tail. Answers written before
+  // the dot was the separator used a dash: \u2014, \u2013 or a hyphen.
+  const title = norm(label.split(/\s+[·\u2014\u2013-]\s+/)[0] ?? label);
   const whole = norm(label);
   if (!title) return null;
   let best: number | null = null;

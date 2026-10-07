@@ -133,8 +133,8 @@ export async function fetch(_url: string, init?: { body?: string; headers?: Reco
   const req = JSON.parse(init?.body ?? "{}") as { stream?: boolean; messages?: { content: string }[] };
   const system = req.messages?.[0]?.content ?? "";
   if (req.stream) {
-    const cite = system.match(/\n(\[[^\]\n]+ — [^\]\n]+\])\n/)?.[1] ?? "";
-    const answer = `From your calls: the closest thing to what you ask is **${cite ? cite.slice(1, cite.indexOf(" — ")) : "none"}** ${cite}.`;
+    const cite = system.match(/\n(\[[^\]\n]+ · [^\]\n]+\])\n/)?.[1] ?? "";
+    const answer = `From your calls: the closest thing to what you ask is **${cite ? cite.slice(1, cite.indexOf(" · ")) : "none"}** ${cite}.`;
     const words = answer.split(/(?<= )/);
     const enc = new TextEncoder();
     const body = new ReadableStream({
@@ -160,7 +160,7 @@ export async function fetch(_url: string, init?: { body?: string; headers?: Reco
     });
   }
   if (system.startsWith("Scrivi la mail di follow-up")) {
-    const text = "Subject: Weekly sync — next steps\n\nHi Julia, hi Sarah,\n\nthanks for today's call. Here is a recap of what we said…\n\nAlex";
+    const text = "Subject: Weekly sync: next steps\n\nHi Julia, hi Sarah,\n\nthanks for today's call. Here is a recap of what we said…\n\nAlex";
     return new Response(JSON.stringify({ choices: [{ message: { content: text } }] }), {
       status: 200,
       headers: { "content-type": "application/json" },

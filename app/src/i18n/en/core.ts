@@ -14,7 +14,7 @@ export default {
 
   // Model client (llm.ts)
   "LLM: nessuna risposta dopo {s} s": "LLM: no answer after {s} s",
-  "LLM locale non raggiungibile su {url} — è acceso? ({error})": "Local LLM not reachable at {url}. Is it running? ({error})",
+  "LLM locale non raggiungibile su {url}. È acceso? ({error})": "Local LLM not reachable at {url}. Is it running? ({error})",
   "(nessuna risposta)": "(no answer)",
   "risposta interrotta": "answer cut off",
   "Manca l'indirizzo del provider.": "The provider's address is missing.",

@@ -1,7 +1,7 @@
 [package]
 name = "mori"
 version = "0.1.0"
-description = "Mori — companion note-taker"
+description = "Mori, companion note-taker"
 authors = ["Lorenzo Alejandro Montes"]
 edition = "2021"
 

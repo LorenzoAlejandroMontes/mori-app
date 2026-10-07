@@ -859,12 +859,13 @@ mod tests {
     /// (`select version, hex(checksum) from _sqlx_migrations`).
     /// Never edit a line here: a released migration is frozen, a fix goes in a
     /// new file. A new migration adds its line once its bytes are final.
-    /// (2 and 3, the sample calls, were rewritten in English on 2026-10-07,
+    /// (2 and 3, the sample calls, were rewritten in English on 2026-10-07 and
+    /// lost their long dashes on 2026-10-08,
     /// before the first public build: no released database had seen them.)
     const MIGRATION_CHECKSUMS: &[(i64, &str)] = &[
         (1, "ff5f4232de041570122b7823c29078fe03be0851fb482d200027e0c86046978ca85874ca9f897416e165fd203e5134a3"),
-        (2, "92ea8224b0b8fb20a7e12b7764fc0894552e91b10395ab667c0d793204b96824d8ff46af6d82715acf75e5df798cd999"),
-        (3, "611eeebbd2cecf5a6c55da099ff24ee7f03a3b1a7307b001d79d8b409552118f8ddc4e8b73466c46df6f25e84e7571c7"),
+        (2, "5878f383e705d83604790ec56a67dc754d723a1731c92fd1f062caaa0b2f4c1239d9867bd9f0c3c1c6b87a93641d374a"),
+        (3, "f6763f8e3fac228dbf06b8475b2a15a115a0da3243a605f04208ba1e0134356f0ee85ae3bf3a16abc447ac966f81e3c2"),
         (4, "c461985e308f5956511e85e14c7ced472f67d6b95036b5a9cc8f7c3d9db184bf6b28bc1bd278d76d2e5d75390e9814fd"),
         (5, "fb3b039f9f2b0560b33efeafa2bdce5472e342c53716330945fd9db030516ae056a3cef50289a3e350f98958603fd7d3"),
         (6, "2710477e9d2d6ea768d14a9310cba8a84800402a1b3b4c8a079bda33c89a1eb80715db9cd44bd01241df4871eb6875b6"),

@@ -3,7 +3,7 @@
 -- Idempotent (fixed ids + INSERT OR IGNORE).
 
 INSERT OR IGNORE INTO session (id, title, kind, folder_path, started_at, ended_at, created_at, updated_at) VALUES
-  ('s4', 'Weekly sync — priorities', 'meeting', '/North Studio',
+  ('s4', 'Weekly sync: priorities', 'meeting', '/North Studio',
    '2026-08-23T09:00:00Z', '2026-08-23T09:25:00Z', '2026-08-23T09:00:00Z', '2026-08-23T09:25:00Z');
 
 INSERT OR IGNORE INTO session_participant (id, session_id, display_name, email, role, organization) VALUES

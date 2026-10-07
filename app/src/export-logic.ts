@@ -51,9 +51,8 @@ export function callToMarkdown(c: ExportCall): string {
   if (c.actions.length) {
     out.push("", "## " + t("Da fare"));
     for (const a of c.actions) {
-      const who = a.assignee ? ` — ${assigneeLabel(a.assignee)}` : "";
-      const due = a.due ? ` (${t("entro {due}", { due: a.due })})` : "";
-      out.push(`- [${a.done ? "x" : " "}] ${a.text}${who}${due}`);
+      const tail = [a.assignee ? assigneeLabel(a.assignee) : "", a.due ? t("entro {due}", { due: a.due }) : ""].filter(Boolean).join(", ");
+      out.push(`- [${a.done ? "x" : " "}] ${a.text}${tail ? ` (${tail})` : ""}`);
     }
   }
 
@@ -82,7 +81,7 @@ export function exportFileName(c: Pick<ExportCall, "title" | "startedAt">, taken
  *  never the raw transcript (the surface that leaves the PC stays minimal). */
 export function followUpContext(c: ExportCall, myName: string | null): string {
   const lines: string[] = [];
-  lines.push(`Call: ${c.title}${fmtDay(c.startedAt) ? ` — ${fmtDay(c.startedAt)}` : ""}`);
+  lines.push(`Call: ${c.title}${fmtDay(c.startedAt) ? `, ${fmtDay(c.startedAt)}` : ""}`);
   if (c.participants.length) lines.push(`Partecipanti: ${c.participants.join(", ")}`);
   if (myName) lines.push(`Chi scrive la mail: ${myName}`);
   if (c.summary.trim()) lines.push("", "Sintesi:", c.summary.trim());
@@ -93,7 +92,7 @@ export function followUpContext(c: ExportCall, myName: string | null): string {
   const open = c.actions.filter((a) => !a.done);
   if (open.length) {
     lines.push("", "Prossimi passi:");
-    for (const a of open) lines.push(`- ${a.text}${a.assignee ? ` — ${a.assignee}` : ""}${a.due ? ` (entro ${a.due})` : ""}`);
+    for (const a of open) lines.push(`- ${a.text}${a.assignee ? `, ${a.assignee}` : ""}${a.due ? ` (entro ${a.due})` : ""}`);
   }
   return lines.join("\n");
 }

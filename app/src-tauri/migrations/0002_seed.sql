@@ -10,7 +10,7 @@ INSERT INTO category (id, name, color, kind, source, created_at) VALUES
 
 -- Session 1 --------------------------------------------------------------
 INSERT INTO session (id, title, kind, folder_path, started_at, ended_at, created_at, updated_at) VALUES
-  ('s1', 'Mori kickoff — architecture', 'meeting', '/Mori',
+  ('s1', 'Mori kickoff: architecture', 'meeting', '/Mori',
    '2026-08-21T10:00:00Z', '2026-08-21T10:45:00Z', '2026-08-21T10:00:00Z', '2026-08-21T10:45:00Z');
 INSERT INTO session_participant (id, session_id, display_name, email, role, organization) VALUES
   ('p1a', 's1', 'Alex', 'you@example.com', 'owner', 'North Studio'),
@@ -32,7 +32,7 @@ INSERT INTO session_category (session_id, category_id, confidence, source, creat
 
 -- Session 2 --------------------------------------------------------------
 INSERT INTO session (id, title, kind, folder_path, started_at, ended_at, created_at, updated_at) VALUES
-  ('s2', 'Call with Mark — Q3 budget', 'meeting', '/North Studio',
+  ('s2', 'Call with Mark: Q3 budget', 'meeting', '/North Studio',
    '2026-08-19T15:00:00Z', '2026-08-19T15:30:00Z', '2026-08-19T15:00:00Z', '2026-08-19T15:30:00Z');
 INSERT INTO session_participant (id, session_id, display_name, email, role, organization) VALUES
   ('p2a', 's2', 'Alex', 'you@example.com', 'owner', 'North Studio'),

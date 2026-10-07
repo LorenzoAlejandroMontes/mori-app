@@ -237,7 +237,7 @@ export function fixtureSql(): string {
      VALUES ('cm1', 'th1', 'user', 'What do I need to do this week?', NULL, 0, ${q(t0)});`,
     `INSERT INTO chat_message (id, thread_id, role, content, sources_json, is_error, created_at)
      VALUES ('cm2', 'th1', 'assistant', ${q(
-       `You have three things of your own this week, one already **overdue**:\n\n- **Set up the paywall A/B test** on RevenueCat — it was due two days ago [Annual plan pricing — yesterday]\n- **Prepare the demo for Mark** by Thursday [Weekly product sync — today]\n- Renew the domain, which you added yourself: it expires **today**.\n\nYou are also waiting on Sarah for this month's conversion numbers.`,
+       `You have three things of your own this week, one already **overdue**:\n\n- **Set up the paywall A/B test** on RevenueCat: it was due two days ago [Annual plan pricing · yesterday]\n- **Prepare the demo for Mark** by Thursday [Weekly product sync · today]\n- Renew the domain, which you added yourself: it expires **today**.\n\nYou are also waiting on Sarah for this month's conversion numbers.`,
      )}, ${q(JSON.stringify(sources))}, 0, ${q(t0)});`,
   );
 

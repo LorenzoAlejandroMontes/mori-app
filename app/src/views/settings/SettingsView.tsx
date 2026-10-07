@@ -630,7 +630,7 @@ export default function SettingsView({
                   {terms.length === 0 && <li className="vocab-empty">{t("Ancora nessun nome.")}</li>}
                   {terms.map((term) => (
                     <li key={term.id} className="vocab-row">
-                      <span className="vocab-wrong">{term.wrong || "—"}</span>
+                      <span className="vocab-wrong">{term.wrong || "·"}</span>
                       <IconArrowRight size={13} />
                       <span className="vocab-right">{term.correct}</span>
                       <button className="icon-btn danger-hover" aria-label={t("Togli {name}", { name: term.correct })} onClick={() => void removeTerm(term.id)}>
@@ -792,7 +792,7 @@ export default function SettingsView({
                         ? stats.wav_count + stats.flac_count === 0
                           ? t("Nessun audio: non occupa spazio.")
                           : tn(stats.wav_count + stats.flac_count, "{size} in 1 file", "{size} in {n} file", { size: humanBytes(stats.wav_bytes + stats.flac_bytes) })
-                        : "—"}
+                        : "…"}
                     </span>
                   </div>
                   {freeAsk ? (

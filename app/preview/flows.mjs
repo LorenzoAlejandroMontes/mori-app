@@ -97,7 +97,7 @@ for (const [label, size] of [["1040", WIDE], ["820", SMALL]]) {
     await p.waitForSelector('.bubble.assistant:last-child :text("From your calls")');
     const cite = p.locator(".bubble.assistant:last-child .md-cite").first();
     await cite.waitFor();
-    const title = (await cite.textContent()).split(" — ")[0].trim();
+    const title = (await cite.textContent()).split(" · ")[0].trim();
     await cite.click();
     await p.waitForSelector(`h1:has-text("${title}")`);
   });

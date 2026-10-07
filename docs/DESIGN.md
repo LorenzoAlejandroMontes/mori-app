@@ -1,4 +1,4 @@
-# Mori — il design
+# Mori: il design
 
 Scritto il 4 ottobre 2026, prima di toccare la UI, partendo da 11 schermate
 (chiaro e scuro, a 820, 1040 e 1440 px). È il contratto per le viste: chi
@@ -286,12 +286,12 @@ pannello a tutto schermo con l'onda, la finestrella sempre in primo piano. Dopo:
 
 Per ognuna: il riferimento, l'idea presa (non lo stile), cosa cambia.
 
-### Oggi — riferimento: la stessa Oggi di adesso
+### Oggi, riferimento: la stessa Oggi di adesso
 Funziona e resta. Cambia solo per coerenza: token AA, card con lo stesso bordo
 delle altre, spunta uguale a quella di Da fare, skeleton al primo caricamento
 invece del vuoto, scorciatoia `/` per scrivere a Mori.
 
-### Pagina della call — riferimento: Granola
+### Pagina della call, riferimento: Granola
 Idea: **il documento è l'eroe**, il resto si chiama quando serve.
 
 ```
@@ -323,31 +323,31 @@ Idea: **il documento è l'eroe**, il resto si chiama quando serve.
   battuta è un bottone (Invio = ascolta da lì). "Chi è l'interlocutore?" resta
   una riga sopra, più sobria.
 
-### Chiedi a Mori — riferimento: Linear (cura), ChatGPT (forma)
+### Chiedi a Mori, riferimento: Linear (cura), ChatGPT (forma)
 Una colonna da 720 px, il campo in basso che cresce con il testo (Invio manda,
 Maiusc+Invio va a capo). Stato vuoto che insegna: tre domande vere e una riga su
 come funzionano le citazioni. "Nuova chat" non chiede conferma: riparte, e il
 toast offre Annulla. Le citazioni restano come sono (funzionano).
 
-### Da fare — riferimento: Things
+### Da fare, riferimento: Things
 Idea: **una lista che respira e un gesto che dà soddisfazione.** La spunta si
 chiude con un piccolo movimento e la riga resta al suo posto un secondo prima di
 scendere tra le fatte. Eliminare offre Annulla. Tastiera: frecce o `J`/`K`,
 Spazio fatta, `E` modifica, `N` nuova, Canc elimina, `/` cerca. Al primo
 caricamento skeleton invece di "Sto guardando…".
 
-### Persone e progetti — riferimento: Attio
+### Persone e progetti, riferimento: Attio
 Un campo per filtrare quando le schede crescono, la griglia si percorre con le
 frecce. Nella scheda: skeleton mentre carica e mentre si scrive il brief, il
 resto com'è (la struttura è buona).
 
-### Tutte le call — riferimento: Linear (liste)
+### Tutte le call, riferimento: Linear (liste)
 Righe invece di card: titolo, persone, categorie, data a destra. Raggruppate per
 tempo, filtro per categoria in una riga, ricerca con `/`. Frecce e Invio.
 "Riorganizza", "Indicizza tutto" e "Gestisci categorie" in un menu ⋯ accanto a
 "Incolla un trascritto".
 
-### Impostazioni — riferimento: Linear / Raycast
+### Impostazioni, riferimento: Linear / Raycast
 Da modale di 1500 px a **pagina** con le sezioni a sinistra (si evidenzia quella
 che stai guardando):
 
@@ -374,13 +374,13 @@ il silenzio, suggerimento quando rilevo una call, resta nella barra),
 (come ti chiamano, dizionario dei nomi), **Aspetto**, **Spazio e copie**. Il
 tema si applica subito, come oggi; il resto con un solo Salva.
 
-### ⌘K — riferimento: Raycast
+### ⌘K, riferimento: Raycast
 Un campo, risultati a gruppi, **frecce per scegliere** (oggi si può solo
 cliccare), Invio esegue la riga evidenziata, la prima riga è evidenziata da sola.
 Comandi nuovi: vai a una sezione, apri una sezione delle impostazioni, tema
 chiaro/scuro, scorciatoie da tastiera. Piede: "↑↓ scegli · ↵ apri · esc chiudi".
 
-### Scorciatoie — pannello nuovo
+### Scorciatoie, pannello nuovo
 `?` (o la voce in fondo alla barra, o ⌘K) apre un pannello con tutte le
 scorciatoie, a gruppi: Ovunque, Liste, Pagina della call, Da fare.
 
@@ -395,7 +395,7 @@ scorciatoie, a gruppi: Ovunque, Liste, Pagina della call, Da fare.
 
 Le scorciatoie di una lettera non scattano mentre scrivi in un campo.
 
-### La pillola — finestra a parte
+### La pillola, finestra a parte
 Resta leggera (nessun import nuovo). Prende i token AA e la stessa forma del
 controllo nella barra: punto, timer a cifre tabulari, Ferma.
 
@@ -441,7 +441,7 @@ voci. Cosa è cambiato, e perché:
   La barra laterale perde il bordo: è sulla carta. La voce dove sei è una
   linguetta bianca, non un fondo grigio. Meno bordi dappertutto: le sezioni di
   Oggi non sono più card, le separa una riga sottile accanto all'etichetta.
-- **Un serif.** Instrument Serif per il saluto ("Buongiorno, *Luca*." — il
+- **Un serif.** Instrument Serif per il saluto ("Buongiorno, *Luca*.": il
   nome, se l'hai dato in *Tu e i nomi*, in corsivo viola), i titoli di pagina e
   di call, i titoli delle sezioni della sintesi, i dialoghi, gli stati vuoti.
   Mai sotto i 20 px, mai come testo corrente. Space Grotesk esce.

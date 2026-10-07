@@ -94,7 +94,7 @@ export function buildBriefContext(d: PersonDossier, today: Date = new Date()): s
 
   if (d.calls.length) {
     blocks.push(
-      `Call insieme:\n${d.calls.slice(0, 8).map((c) => `- ${c.title} — ${fmtBriefDate(c.startedAt)}`).join("\n")}`,
+      `Call insieme:\n${d.calls.slice(0, 8).map((c) => `- ${c.title}, ${fmtBriefDate(c.startedAt)}`).join("\n")}`,
     );
   }
   if (d.theyOwe.length) {

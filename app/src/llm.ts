@@ -304,7 +304,7 @@ export async function chatComplete(
     } catch (e) {
       if (ctrl.signal.aborted) throw new Error(t("LLM: nessuna risposta dopo {s} s", { s: Math.round(timeoutMs / 1000) }));
       if (isLocalProvider(cfg)) {
-        throw new Error(t("LLM locale non raggiungibile su {url} — è acceso? ({error})", { url: cfg.baseUrl, error: String(e) }));
+        throw new Error(t("LLM locale non raggiungibile su {url}. È acceso? ({error})", { url: cfg.baseUrl, error: String(e) }));
       }
       throw e;
     }
@@ -405,7 +405,7 @@ export async function chatStream(
     } catch (e) {
       if (ctrl.signal.aborted) throw new Error(t("LLM: nessuna risposta dopo {s} s", { s: Math.round(idleMs / 1000) }));
       if (isLocalProvider(cfg)) {
-        throw new Error(t("LLM locale non raggiungibile su {url} — è acceso? ({error})", { url: cfg.baseUrl, error: String(e) }));
+        throw new Error(t("LLM locale non raggiungibile su {url}. È acceso? ({error})", { url: cfg.baseUrl, error: String(e) }));
       }
       throw e;
     }

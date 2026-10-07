@@ -170,7 +170,7 @@ function keyTokens(s: string): Set<string> {
  */
 export function cleanAssignee(raw: string | null | undefined): string | null {
   const s = (raw ?? "").trim();
-  if (!s || /^(null|none|nil|undefined|n\/a|nessuno|nessuna|[-–—])$/i.test(s)) return null;
+  if (!s || /^(null|none|nil|undefined|n\/a|nessuno|nessuna|[-\u2013\u2014])$/i.test(s)) return null;
   return s;
 }
 
