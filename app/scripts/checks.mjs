@@ -116,6 +116,7 @@ async function main() {
     "recording-logic",
     "ui/platform",
     "ui/keys",
+    "setup-logic",
   ]);
   // Node on a Mac says it is a Mac: the checks below assert the Windows
   // wording, wherever they run. Section 28 asks for both.
@@ -488,6 +489,7 @@ async function main() {
   liveChannelChecks({ mods });
   platformChecks({ mods });
   englishChecks({ mods });
+  setupChecks({ mods });
 
   // =========================================================================
   // Optional: run the real recall against a COPY of a real database, to prove the
@@ -1351,6 +1353,24 @@ function englishChecks({ mods }) {
     // "Tu" / "Interlocutore" are stored labels, translated when shown.
     .filter((x) => x !== "Tu" && x !== "Interlocutore");
   eq("gli script Python parlano inglese", hits(py).join(" | "), "");
+}
+
+// First launch of a packaged Mori: what the strip under the recorder says.
+function setupChecks({ mods }) {
+  const sl = mods["setup-logic"];
+  const i18n = mods["i18n/index"];
+  // -----------------------------------------------------------------------
+  section("30 · la prima apertura si prepara da sola, e dice a che punto è");
+  i18n.useLangNow("en");
+  eq("primo passo", sl.setupLine("python"), "1 of 3 · downloading Python");
+  eq("secondo passo", sl.setupLine("packages"), "2 of 3 · installing audio and transcription");
+  eq("terzo passo", sl.setupLine("check"), "3 of 3 · checking that everything works");
+  i18n.useLangNow("it");
+  eq("in italiano", sl.setupLine("packages"), "2 di 3 · installo audio e trascrizione");
+  check("la linea avanza a ogni passo", sl.setupFraction("python") < sl.setupFraction("packages") && sl.setupFraction("packages") < sl.setupFraction("check"));
+  check("e non è mai piena prima della fine", sl.setupFraction("check") < 1);
+  eq("un passo sconosciuto non rompe niente", sl.parseStage("altro"), null);
+  eq("un passo noto si riconosce", sl.parseStage("check"), "check");
 }
 
 main().catch((e) => {

@@ -1,8 +1,10 @@
 name: macOS app
 
-# docs/MACOS.md, M1: a Mac app comes out of CI. The job builds Mori.app and a
-# .dmg for Apple Silicon, checks what is inside, then records a known sentence
-# with the recorder that lives INSIDE the app taken from the .dmg.
+# docs/MACOS.md, M1 to M5: a Mac app comes out of CI. The job builds Mori.app
+# and a .dmg for Apple Silicon, checks what is inside, then uses the app taken
+# from the .dmg the way a person would: first launch with no Python anywhere
+# (Mori prepares its own), a recording started with the global shortcut, the
+# transcript, Cmd+Q in the middle of a call.
 # The app is signed ad hoc: no certificate, no secret.
 on:
   push:
@@ -50,6 +52,12 @@ jobs:
           bash native/mori-sysaudio/build.sh
           ls -l native/mori-sysaudio/build
 
+      # uv travels inside the app too: on first launch it makes Mori's Python.
+      - name: Fetch uv
+        run: |
+          bash native/uv/fetch.sh
+          ls -l native/uv/build
+
       - uses: dtolnay/rust-toolchain@stable
 
       - uses: Swatinem/rust-cache@v2
@@ -96,6 +104,8 @@ jobs:
           echo "## the checks"
           test -x "$APP/Contents/MacOS/mori-sysaudio"
           file "$APP/Contents/MacOS/mori-sysaudio" | grep arm64
+          test -x "$APP/Contents/MacOS/uv"
+          "$APP/Contents/MacOS/uv" --version
           for f in record.py transcribe.py transcribe_cloud.py transcribe_diarized.py whisper_common.py progress_file.py embed.py toflac.py; do
             test -f "$APP/Contents/Resources/scripts/$f" || { echo "missing scripts/$f"; exit 1; }
           done
@@ -123,20 +133,6 @@ jobs:
           echo "## deep verification"
           codesign --verify --deep --strict --verbose=2 "$APP"
           echo "all bundle checks passed"
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      # ~/.mori/venv is where the app looks for its Python. It is filled from
-      # the requirements.txt that travels inside the app.
-      - name: Python environment in ~/.mori/venv
-        run: |
-          mkdir -p "$HOME/.mori"
-          python -m venv "$HOME/.mori/venv"
-          "$HOME/.mori/venv/bin/pip" install --quiet -r "$APP/Contents/Resources/requirements.txt"
-          "$HOME/.mori/venv/bin/python" -c "import soundcard, numpy, faster_whisper; print('imports ok')"
-          echo "PY=$HOME/.mori/venv/bin/python" >> "$GITHUB_ENV"
 
       - name: A sentence to play
         run: |
@@ -167,8 +163,48 @@ jobs:
           echo "## system"; sudo sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" "$SQL" | tee "$R/tcc_system.txt"
           echo "## user"; sqlite3 "$HOME/Library/Application Support/com.apple.TCC/TCC.db" "$SQL" | tee "$R/tcc_user.txt"
 
-      # The recorder and the helper are the ones inside the app. No environment
-      # variable tells record.py where the helper is: it has to find it.
+      # docs/MACOS.md, M5: no Python to install. This job never sets one up:
+      # there is no ~/.mori/venv, and an app opened from Finder does not see the
+      # shell's PATH. Mori has to prepare its own environment with the uv
+      # inside the app, and say how far it is while it does.
+      - name: First launch, Mori prepares its own Python
+        run: |
+          [ ! -e "$HOME/.mori/venv" ] || { echo "there is already a ~/.mori/venv: this would prove nothing"; exit 1; }
+          # The app looks for scripts next to its source folder first. On this
+          # machine that folder exists; hide it so the app can only use its own.
+          mv scripts scripts.checkout
+          open --stdout "$R/app.out" --stderr "$R/app.err" "$APP"
+          PYV="$HOME/.mori/venv/bin/python"
+          SHOT=0
+          for i in $(seq 1 200); do
+            if [ $((i % 3)) -eq 0 ] && [ $SHOT -lt 12 ]; then SHOT=$((SHOT + 1)); screencapture -x "$R/setup_$SHOT.png"; fi
+            if grep -q "^## check" "$HOME/.mori/setup.log" 2>/dev/null && "$PYV" -c "import soundcard, numpy, faster_whisper" 2>/dev/null; then break; fi
+            sleep 2
+          done
+          echo "## what the app could see"
+          PID=$(pgrep -f "Mori.app/Contents/MacOS/mori$" | head -1)
+          ps eww -o command= -p "$PID" | tr ' ' '\n' | grep -E "^(PATH|HOME)=" | tee "$R/app_env.txt" || true
+          echo "## the setup log (~/.mori/setup.log)"
+          cat "$HOME/.mori/setup.log" | tee "$R/setup.log"
+          echo "## the environment Mori made"
+          "$PYV" -c "import sys, soundcard, numpy, faster_whisper; print('imports ok,', sys.version); print(sys.executable)" | tee "$R/setup_python.txt"
+          ls "$HOME/.mori"; du -sh "$HOME/.mori/venv" "$HOME/.mori/python" | tee "$R/setup_sizes.txt"
+          grep -q "$HOME/.mori/python" <(readlink "$HOME/.mori/venv/bin/python" || "$PYV" -c "import sys; print(sys.base_prefix)") || { echo "the venv is not built on Mori's own Python"; exit 1; }
+          sleep 4
+          screencapture -x "$R/setup_ready.png"
+          echo "## quit (Cmd+Q, nothing recording)"
+          osascript -e 'tell application "System Events" to tell process "mori" to set frontmost to true' 2>&1 || true
+          sleep 1
+          osascript -e 'tell application "System Events" to keystroke "q" using {command down}' 2>&1 || echo "could not send Cmd+Q"
+          for i in $(seq 1 50); do pgrep -f "Mori.app/Contents/MacOS/mori$" > /dev/null || break; sleep 0.2; done
+          pgrep -fl "Mori.app/Contents/MacOS/mori$" && { echo "Mori did not quit: stopping it"; pkill -f "Mori.app/Contents/MacOS/mori$" || true; } || echo "Mori quit"
+          mv scripts.checkout scripts
+          echo "PY=$PYV" >> "$GITHUB_ENV"
+          echo "Mori prepared its own Python"
+
+      # The recorder and the helper are the ones inside the app, run by the
+      # Python Mori just made. No environment variable tells record.py where
+      # the helper is: it has to find it.
       - name: The recorder inside the app hears the other side
         run: |
           REC="$APP/Contents/Resources/scripts/record.py"
@@ -201,15 +237,48 @@ jobs:
           sleep 2
           attempt 2
 
+      # docs/MACOS.md, M3: honest states. When the helper is not there, or
+      # stops in the middle of a call, the recorder says so in the file the
+      # interface reads (<wav>.levels, "errs"), and your side keeps recording.
+      - name: Without the helper, Mori says so and keeps your side
+        run: |
+          ditto "$APP" "$RUNNER_TEMP/nohelper/Mori.app"
+          rm "$RUNNER_TEMP/nohelper/Mori.app/Contents/MacOS/mori-sysaudio"
+          one() {
+            NAME=$1; REC=$2; KILL=$3; EXPECT=$4
+            OUT="$R/$NAME.wav"; STOP="$R/$NAME.stop"
+            (cd "$RUNNER_TEMP" && env -u MORI_SYSAUDIO "$PY" "$REC" "$OUT" "$STOP" 60 > "$R/$NAME.out" 2> "$R/$NAME.err") &
+            P=$!
+            for i in $(seq 1 100); do [ -f "$OUT.started" ] && break; sleep 0.2; done
+            [ -f "$OUT.started" ] || { echo "$NAME: the recorder did not start"; cat "$R/$NAME.err"; return 1; }
+            sleep 2
+            if [ "$KILL" = yes ]; then echo "## stopping the helper in the middle"; pkill -9 -f "MacOS/mori-sysaudio" || true; fi
+            sleep 3
+            echo "## $NAME: what the interface reads while recording"
+            cp "$OUT.levels" "$R/$NAME.levels.json"; cat "$R/$NAME.levels.json"; echo
+            touch "$STOP"
+            wait $P; CODE=$?
+            echo "## $NAME: recorder exit code $CODE, said:"; cat "$R/$NAME.out" "$R/$NAME.err"
+            [ "$CODE" = 0 ] || { echo "$NAME: the recorder crashed"; return 1; }
+            grep -q "\"sys: $EXPECT" "$R/$NAME.levels.json" || { echo "$NAME: the levels do not say the other side is gone"; return 1; }
+            [ -f "$OUT.done" ] || { echo "$NAME: the recording was not closed"; return 1; }
+            "$PY" -c "import sys, wave; w = wave.open(sys.argv[1]); s = w.getnframes() / w.getframerate(); print('your side:', w.getframerate(), 'Hz,', w.getnchannels(), 'channel,', round(s, 1), 's'); sys.exit(0 if w.getframerate() == 16000 and w.getnchannels() == 1 and s >= 4 else 1)" "$OUT.mic.wav" | tee "$R/$NAME.mic.txt"
+          }
+          set +e
+          one nohelper "$RUNNER_TEMP/nohelper/Mori.app/Contents/Resources/scripts/record.py" no "mori-sysaudio not found"; A=$?
+          one helpergone "$APP/Contents/Resources/scripts/record.py" yes "mori-sysaudio stopped"; B=$?
+          set -e
+          [ "$A" = 0 ] && [ "$B" = 0 ] || exit 1
+          echo "without the helper the recorder says so, and your side is still recorded"
+
       # The whole app, as a user would run it: opened from Finder's point of
-      # view, started and stopped with the global shortcut. This step reports;
-      # it does not decide whether the job is green (see docs/MACOS.md, M2-M4).
+      # view, started and stopped with the global shortcut. This step and the
+      # two after it report; they do not decide whether the job is green:
+      # driving a window on a CI machine is the fragile part.
       - name: The app itself, opened and driven with its shortcut
         id: live
         continue-on-error: true
         run: |
-          # The app looks for scripts next to its source folder first. On this
-          # machine that folder exists; hide it so the app can only use its own.
           mv scripts scripts.checkout
           T=$(getconf DARWIN_USER_TEMP_DIR)
           rm -f "$T"/mori_rec_* || true
@@ -217,15 +286,21 @@ jobs:
           sleep 12
           echo "## processes"; pgrep -fl "Mori.app" || { echo "the app is not running"; cat "$R/app.err" || true; exit 1; }
           screencapture -x "$R/app_open.png"
+          echo "## windows"
+          osascript -e 'tell application "System Events" to get {name, position, size} of every window of process "mori"' 2>&1 || true
           # The menu behind the menu bar icon, in the language of the interface.
           osascript -e 'tell application "System Events" to tell process "mori" to click menu bar item 1 of menu bar 2' 2>&1 || echo "could not open the menu bar icon's menu"
           sleep 1
           screencapture -x "$R/app_menu_bar_icon.png"
           osascript -e 'tell application "System Events" to key code 53' 2>&1 || true
           sleep 1
-          echo "## windows"
-          osascript -e 'tell application "System Events" to get {name, position, size} of every window of process "mori"' 2>&1 || true
-          osascript -e 'tell application "System Events" to get name of every process whose background only is false' 2>&1 || true
+          # Settings (Cmd+,), then back to Today (Cmd+1): one more page to look at.
+          osascript -e 'tell application "System Events" to tell process "mori" to set frontmost to true' 2>&1 || true
+          osascript -e 'tell application "System Events" to keystroke "," using {command down}' 2>&1 || true
+          sleep 2
+          screencapture -x "$R/app_settings.png"
+          osascript -e 'tell application "System Events" to keystroke "1" using {command down}' 2>&1 || true
+          sleep 1
 
           echo "## shortcut: start"
           osascript -e 'tell application "System Events" to key code 15 using {command down, shift down}' 2>&1 || echo "could not send the shortcut"
@@ -257,23 +332,47 @@ jobs:
           [ -f "$R/live_others.wav" ] || { echo "the recording did not finish"; ls -la "$T" | grep mori_rec || true; cat "$T"/mori_rec_*.log 2>/dev/null || true; exit 1; }
           sleep 3
           screencapture -x "$R/app_after_stop.png"
-          # Settings (Cmd+,), then back to Today (Cmd+1): one more page to look at.
-          osascript -e 'tell application "System Events" to tell process "mori" to set frontmost to true' 2>&1 || true
-          osascript -e 'tell application "System Events" to keystroke "," using {command down}' 2>&1 || true
-          sleep 2
-          screencapture -x "$R/app_settings.png"
-          osascript -e 'tell application "System Events" to keystroke "1" using {command down}' 2>&1 || true
-          sleep 1
           cat "$T"/mori_rec_*.log 2>/dev/null || true
           echo "## the others' channel, recorded by the running app"
           "$PY" native/mori-sysaudio/ci_check.py "$R/live_others.wav" meeting thursday slides | tee "$R/live_others.json"
+          grep -qE "$HOME/\.mori/(venv|python)/" "$R/live_recorder.txt" || { echo "the recorder was not run by the Python Mori prepared"; exit 1; }
           grep -q "$APP/Contents/Resources/scripts/record.py" "$R/live_recorder.txt" || { echo "the recorder was not the one inside the app"; exit 1; }
           grep -q "$APP/Contents/MacOS/mori-sysaudio" "$R/live_helper.txt" || { echo "the helper was not the one inside the app"; exit 1; }
           echo "the running app recorded the other side"
 
-          # Cmd+Q in the middle of a call (docs/MACOS.md, M2): Mori stops the
-          # recording, saves the call, then quits. Nothing is left running.
-          echo "## a second recording, ended with Cmd+Q"
+      # The call just recorded becomes text inside the app, with what a new
+      # install has: no key, so the local Whisper (it downloads its model the
+      # first time).
+      - name: The app transcribes the call it recorded
+        id: transcribe
+        if: steps.live.outcome == 'success'
+        continue-on-error: true
+        run: |
+          Q="select s.title, s.status, t.provider, t.model, replace(t.memo, char(10), ' / ') from session s join session_transcript t on t.session_id = s.id where t.provider != 'seed'"
+          for i in $(seq 1 120); do
+            sqlite3 "$HOME/.mori/mori.db" "$Q" > "$R/transcript_in_app.txt" 2>/dev/null || true
+            grep -qi "thursday" "$R/transcript_in_app.txt" && break
+            [ $((i % 6)) -eq 0 ] && { echo "waiting ($((i * 5)) s)"; sqlite3 "$HOME/.mori/mori.db" "select kind, status, substr(coalesce(error, ''), 1, 200) from job" 2>/dev/null || true; }
+            [ "$i" = 4 ] && screencapture -x "$R/app_transcribing.png"
+            sleep 5
+          done
+          echo "## what Mori wrote down"
+          cat "$R/transcript_in_app.txt"
+          sqlite3 "$HOME/.mori/mori.db" "select kind, status, substr(coalesce(error, ''), 1, 200) from job" | tee "$R/jobs_in_app.txt" || true
+          sleep 3
+          screencapture -x "$R/app_transcribed.png"
+          grep -qi "thursday" "$R/transcript_in_app.txt" || { echo "the transcript did not arrive"; ls -la "$HOME/.mori" "$HOME/.cache/huggingface/hub" 2>/dev/null || true; exit 1; }
+          grep -qi "slides" "$R/transcript_in_app.txt" || { echo "the transcript is not the sentence that was played"; exit 1; }
+          echo "the app transcribed the call it recorded"
+
+      # Cmd+Q in the middle of a call (docs/MACOS.md, M2): Mori stops the
+      # recording, saves the call, then quits. Nothing is left running.
+      - name: Cmd+Q during a call saves it first
+        id: quit
+        if: steps.live.outcome == 'success'
+        continue-on-error: true
+        run: |
+          T=$(getconf DARWIN_USER_TEMP_DIR)
           rm -f "$T"/mori_rec_*.started
           osascript -e 'tell application "System Events" to key code 15 using {command down, shift down}' 2>&1 || echo "could not send the shortcut"
           SECOND=""
@@ -295,14 +394,18 @@ jobs:
           pgrep -fl "mori-sysaudio" && { echo "the helper was left running"; exit 1; } || true
           [ -f "$WAV2.done" ] || { echo "the recorder was not stopped cleanly: no $WAV2.done"; ls -la "$T" | grep mori_rec || true; exit 1; }
           echo "## the calls Mori saved"
-          sqlite3 "$HOME/.mori/mori.db" "select title, status from session where title like 'Recording%' or title like 'Registrazione%'" | tee "$R/calls_after_quit.txt"
+          sqlite3 "$HOME/.mori/mori.db" "select title, status from session where title like 'Recording%'" | tee "$R/calls_after_quit.txt"
           [ "$(wc -l < "$R/calls_after_quit.txt")" -ge 2 ] || { echo "the call recorded before Cmd+Q was not saved"; exit 1; }
           echo "Cmd+Q during a call: recording stopped and saved, nothing left running"
 
       - name: After the live run
         if: always()
         run: |
-          echo "live step: ${{ steps.live.outcome }}" | tee "$R/live_outcome.txt"
+          {
+            echo "live step: ${{ steps.live.outcome }}"
+            echo "transcription in the app: ${{ steps.transcribe.outcome }}"
+            echo "Cmd+Q during a call: ${{ steps.quit.outcome }}"
+          } | tee "$R/live_outcome.txt"
           [ -d scripts.checkout ] && mv scripts.checkout scripts || true
           pkill -f "Mori.app/Contents/MacOS" || true
           ls -la "$HOME/.mori" "$HOME/.mori/audio" 2>/dev/null || true
@@ -314,10 +417,11 @@ jobs:
         run: |
           {
             echo "### Mori.app from the .dmg"
-            echo "Live run of the app (shortcut, recording): **${{ steps.live.outcome }}**"
+            echo '```'; cat "$R/live_outcome.txt" 2>/dev/null || true; echo '```'
             for f in packaged_others live_others; do
               if [ -f "$R/$f.json" ]; then echo "**$f**"; echo '```json'; cat "$R/$f.json"; echo '```'; fi
             done
+            if [ -f "$R/transcript_in_app.txt" ]; then echo "**transcript in the app**"; echo '```'; cat "$R/transcript_in_app.txt"; echo '```'; fi
             if [ -f "$R/codesign_app.txt" ]; then echo '```'; cat "$R/codesign_app.txt"; echo '```'; fi
           } >> "$GITHUB_STEP_SUMMARY"
 

@@ -26,6 +26,8 @@ that should be credited here, please open an issue.
 | [paraphrase-multilingual-MiniLM-L12-v2](https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2) | embedding model | Apache-2.0 |
 | [SoundCard](https://github.com/bastibe/SoundCard) | microphone and system audio capture | BSD-3-Clause |
 | [NumPy](https://numpy.org) | audio buffers | BSD-3-Clause |
+| [uv](https://github.com/astral-sh/uv) | inside the packaged app: prepares Mori's Python environment on first launch | Apache-2.0 or MIT |
+| [CPython](https://www.python.org), as built by [python-build-standalone](https://github.com/astral-sh/python-build-standalone) | downloaded by uv on first launch, not shipped in the app | PSF-2.0 (the build scripts: MPL-2.0) |
 | Hanken Grotesk, Instrument Serif, JetBrains Mono (via [Fontsource](https://fontsource.org)) | typography | SIL OFL 1.1 |
 
 ## Development only

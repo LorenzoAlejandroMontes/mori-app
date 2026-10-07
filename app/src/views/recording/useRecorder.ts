@@ -24,6 +24,7 @@ import {
 } from "../../companion";
 import { fmtClock } from "../../ui/format";
 import { hotkeyLabel } from "../../ui/keys";
+import { setupNow } from "../../setup";
 import { useTranscribeProgress, useUnderstanding } from "../../progress";
 import { understandLine } from "../../progress-logic";
 import { t, tn } from "../../i18n";
@@ -429,6 +430,12 @@ export function useRecorder({
           await recordingSettled();
         }
       } else {
+        // First launch of a packaged Mori: the recorder is still being
+        // installed (the strip under the control says how far it is).
+        if (setupNow().phase === "preparing") {
+          setRecError(t("Ancora un momento: sto preparando la registrazione."));
+          return;
+        }
         setRecError(null);
         setStarting(true);
         try {

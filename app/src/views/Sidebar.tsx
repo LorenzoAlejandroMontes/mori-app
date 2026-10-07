@@ -23,7 +23,8 @@ import {
 } from "../ui/icons";
 import RecordControl, { type RecState } from "./recording/RecordControl";
 import type { ChannelIssue, Levels } from "../recording-logic";
-import { WorkStrip } from "./recording/TranscribeProgress";
+import { SetupStrip, WorkStrip } from "./recording/TranscribeProgress";
+import { retrySetup, useSetup } from "../setup";
 import { useTranscribeProgress, useUnderstanding } from "../progress";
 import { progressLine, understandFraction, understandLine } from "../progress-logic";
 import { t } from "../i18n";
@@ -125,6 +126,7 @@ export function Sidebar({
   const queuedOf = (kind: string) =>
     Object.values(jobs).filter((j) => j.kind === kind && (j.status === "pending" || j.status === "running")).length;
   // Transcribing first (it is the longer wait), then understanding.
+  const setup = useSetup();
   const work = progress
     ? { id: progress.sessionId, verb: t("Trascrivo"), fraction: progress.fraction, line: progressLine(progress), queued: queuedOf("transcribe") - 1 }
     : understanding
@@ -181,6 +183,8 @@ export function Sidebar({
         levels={levels}
         issue={issue}
       />
+
+      <SetupStrip setup={setup} onRetry={retrySetup} />
 
       {work && workSession && (
         <WorkStrip

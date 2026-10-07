@@ -102,6 +102,7 @@ import CallDetectBanner from "./views/CallDetectBanner";
 import ReadyToast, { type Ready } from "./views/ReadyToast";
 import { useRecorder } from "./views/recording/useRecorder";
 import { t, tn } from "./i18n";
+import { ensureSetup } from "./setup";
 
 /** A recorder label as shown: the stored value stays Italian, the text follows the language. */
 function speakerLabel(label: string): string {
@@ -333,6 +334,8 @@ export default function App() {
       .catch(() => {});
     // One snapshot a day, in the background, silently (DECISIONS.md, 23/8).
     void maybeBackup();
+    // A packaged Mori with no Python yet prepares its own, once.
+    void ensureSetup();
   }, []);
 
   // Keep the UI in step with the queue: a job that finishes in the background

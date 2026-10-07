@@ -1,10 +1,11 @@
 mod companion;
 mod maintenance;
 mod platform;
+mod pyenv;
 
 use std::path::PathBuf;
 use std::process::Command;
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::Manager;
 use tauri_plugin_sql::{Migration, MigrationKind};
@@ -90,38 +91,86 @@ fn scripts_dir() -> PathBuf {
 /// first on PATH silently breaks recording. So we probe candidates and cache the
 /// first that works. Returns the argv prefix (program + leading args).
 fn python_cmd() -> Vec<String> {
-    static CACHE: OnceLock<Vec<String>> = OnceLock::new();
-    CACHE
-        .get_or_init(|| {
-            // Prefer a dedicated venv (self-contained, doesn't depend on
-            // user-site or which python is first on PATH): the one next to the
-            // scripts, then `~/.mori/venv`. Fall back to the system Python.
-            let mut candidates: Vec<Vec<String>> = Vec::new();
-            let mut venvs: Vec<PathBuf> = app_dir_candidates().iter().map(|d| d.join(".venv")).collect();
-            venvs.push(platform::mori_dir().join("venv"));
-            for v in venvs {
-                let py = platform::venv_python(&v);
-                if py.is_file() {
-                    candidates.push(vec![py.to_string_lossy().into_owned()]);
-                }
-            }
-            candidates.extend(platform::system_pythons());
-            for c in &candidates {
-                let ok = Command::new(&c[0])
-                    .no_window()
-                    .args(&c[1..])
-                    .arg("-c")
-                    .arg("import soundcard, numpy")
-                    .output()
-                    .map(|o| o.status.success())
-                    .unwrap_or(false);
-                if ok {
-                    return c.clone();
-                }
-            }
-            platform::system_pythons().into_iter().next().unwrap_or_else(|| vec!["python".into()])
-        })
-        .clone()
+    // Only a Python that works is remembered: after the first-run setup
+    // (pyenv.rs) has made `~/.mori/venv`, the next call finds it.
+    let mut cache = PYTHON.lock().unwrap();
+    if let Some(found) = cache.as_ref() {
+        return found.clone();
+    }
+    match find_python() {
+        Some(found) => {
+            *cache = Some(found.clone());
+            found
+        }
+        None => platform::system_pythons().into_iter().next().unwrap_or_else(|| vec!["python".into()]),
+    }
+}
+
+static PYTHON: Mutex<Option<Vec<String>>> = Mutex::new(None);
+
+/// The first interpreter that can import the recorder's modules, or None.
+fn find_python() -> Option<Vec<String>> {
+    // Prefer a dedicated venv (self-contained, doesn't depend on
+    // user-site or which python is first on PATH): the one next to the
+    // scripts, then `~/.mori/venv`. Fall back to the system Python.
+    let mut candidates: Vec<Vec<String>> = Vec::new();
+    let mut venvs: Vec<PathBuf> = app_dir_candidates().iter().map(|d| d.join(".venv")).collect();
+    venvs.push(pyenv::venv_dir());
+    for v in venvs {
+        let py = platform::venv_python(&v);
+        if py.is_file() {
+            candidates.push(vec![py.to_string_lossy().into_owned()]);
+        }
+    }
+    // A packaged Mac app makes its own environment instead of trying
+    // `python3`: on a Mac without the developer tools that name is a stub
+    // that opens an "install the command line tools" dialog.
+    if !(cfg!(target_os = "macos") && pyenv::bundled_uv().is_some()) {
+        candidates.extend(platform::system_pythons());
+    }
+    candidates.into_iter().find(|c| {
+        Command::new(&c[0])
+            .no_window()
+            .args(&c[1..])
+            .arg("-c")
+            .arg("import soundcard, numpy")
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+    })
+}
+
+/// Whether the Python side is usable, and whether Mori can prepare it itself.
+#[derive(serde::Serialize)]
+struct EnvStatus {
+    ready: bool,
+    can_prepare: bool,
+}
+
+#[tauri::command]
+async fn python_env_status() -> Result<EnvStatus, String> {
+    tauri::async_runtime::spawn_blocking(|| {
+        let ready = PYTHON.lock().unwrap().is_some() || find_python().is_some();
+        EnvStatus { ready, can_prepare: pyenv::bundled_uv().is_some() }
+    })
+    .await
+    .map_err(|e| format!("task failed: {e}"))
+}
+
+/// First launch of a packaged Mori: make `~/.mori/venv` with the bundled uv.
+/// Progress goes out as `setup://progress` events.
+#[tauri::command]
+async fn prepare_python_env(app: tauri::AppHandle) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        pyenv::prepare(&app, &app_dir().join("requirements.txt"))?;
+        *PYTHON.lock().unwrap() = None;
+        match find_python() {
+            Some(_) => Ok(()),
+            None => Err("The environment was prepared but Python still does not start".to_string()),
+        }
+    })
+    .await
+    .map_err(|e| format!("task failed: {e}"))?
 }
 
 pub(crate) fn py_command(script: &str) -> Command {
@@ -757,6 +806,8 @@ pub fn run() {
             embed_texts,
             foreground_window_title,
             get_db_url,
+            python_env_status,
+            prepare_python_env,
             maintenance::compress_audio,
             maintenance::move_audio,
             maintenance::allow_audio_dir,

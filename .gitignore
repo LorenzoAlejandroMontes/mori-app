@@ -30,3 +30,6 @@ Thumbs.db
 
 # macOS helper build output
 app/native/mori-sysaudio/build/
+
+# The uv binary a packaged build carries (fetched by app/native/uv/fetch.sh)
+app/native/uv/build/

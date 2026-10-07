@@ -2,6 +2,7 @@
 // needs. The same line in the sidebar (under the recorder), on the page of the
 // call and — drawn by the pill itself — in the always-on-top status pill.
 import { t } from "../../i18n";
+import { setupFraction, setupLine, type SetupState } from "../../setup-logic";
 
 /** A thin line; indeterminate (a moving sweep) while there is no number yet. */
 export function ProgressLine({ fraction, className = "" }: { fraction: number | null; className?: string }) {
@@ -54,4 +55,42 @@ export function WorkStrip({
       </span>
     </button>
   );
+}
+
+/** Under the recorder on the first launch of a packaged Mori: the Python side
+ *  is being prepared (once), or it stopped and can be tried again. Same paper
+ *  strip as the transcription: work going on in the background. */
+export function SetupStrip({ setup, onRetry }: { setup: SetupState; onRetry: () => void }) {
+  if (setup.phase === "preparing") {
+    return (
+      <div className="tr-strip setup" role="status" data-setup="preparing">
+        <span className="tr-strip-top">
+          <span className="spinner sm" aria-hidden="true" />
+          <span className="tr-strip-title">
+            <b>{t("Preparo Mori")}</b> {t("per la prima call")}
+          </span>
+        </span>
+        <ProgressLine fraction={setupFraction(setup.stage)} />
+        <span className="tr-strip-meta">
+          <span className="tr-strip-line">{setupLine(setup.stage)}</span>
+        </span>
+      </div>
+    );
+  }
+  if (setup.phase === "failed") {
+    return (
+      <div className="tr-strip setup" role="alert" data-setup="failed" title={setup.error}>
+        <span className="tr-strip-title">
+          <b>{t("La preparazione si è fermata")}</b>
+        </span>
+        <span className="tr-strip-meta">
+          <span className="setup-why">{t("Controlla la connessione e riprova.")}</span>
+        </span>
+        <button className="btn sm" onClick={onRetry}>
+          {t("Riprova")}
+        </button>
+      </div>
+    );
+  }
+  return null;
 }

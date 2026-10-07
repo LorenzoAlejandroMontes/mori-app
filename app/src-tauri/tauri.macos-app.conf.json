@@ -1,6 +1,6 @@
 {
   "bundle": {
-    "externalBin": ["../native/mori-sysaudio/build/mori-sysaudio"],
+    "externalBin": ["../native/mori-sysaudio/build/mori-sysaudio", "../native/uv/build/uv"],
     "macOS": {
       "minimumSystemVersion": "14.2",
       "signingIdentity": "-",

@@ -1,6 +1,15 @@
 // The first step (a Groq key on the spot) and what Mori says when Groq could
 // not transcribe and the local Whisper did.
 export default {
+  "Preparo Mori": "Getting Mori ready",
+  "per la prima call": "for your first call",
+  "{n} di {total} · {what}": "{n} of {total} · {what}",
+  "scarico Python": "downloading Python",
+  "installo audio e trascrizione": "installing audio and transcription",
+  "controllo che tutto funzioni": "checking that everything works",
+  "La preparazione si è fermata": "Setup stopped before the end",
+  "Controlla la connessione e riprova.": "Check your connection and try again.",
+  "Ancora un momento: sto preparando la registrazione.": "One more moment: recording is still being set up.",
   "Mori è collegato a Groq: capisce le call e le trascrive in pochi secondi.": "Mori is connected to Groq: it understands your calls and transcribes them in seconds.",
   "La chiave Groq non è valida: ho trascritto sul PC, più lentamente. Controllala in Impostazioni → Trascrizione.": "The Groq key isn't valid: I transcribed on your PC instead, more slowly. Check it in Settings → Transcription.",
   "Hai finito l'audio gratuito di Groq per ora: ho trascritto sul PC, più lentamente. Si ricarica da solo.": "You've used up Groq's free audio for now: I transcribed on your PC instead, more slowly. It refills on its own.",
