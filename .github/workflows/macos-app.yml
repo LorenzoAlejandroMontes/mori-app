@@ -115,6 +115,9 @@ jobs:
           echo "## signature of the helper inside it"
           codesign -dvv "$APP/Contents/MacOS/mori-sysaudio" 2>&1 | tee "$R/codesign_helper.txt"
           grep -q "^Signature=adhoc" "$R/codesign_helper.txt"
+          echo "## what the helper is entitled to"
+          codesign -d --entitlements - "$APP/Contents/MacOS/mori-sysaudio" 2>&1 | tee "$R/entitlements_helper.txt"
+          grep -q "com.apple.security.device.audio-input" "$R/entitlements_helper.txt"
           echo "## deep verification"
           codesign --verify --deep --strict --verbose=2 "$APP"
           echo "all bundle checks passed"
@@ -193,6 +196,30 @@ jobs:
           killall tccd || true
           sleep 2
           attempt 2
+
+      # Why the entitlement: the same helper, signed three ways, while the
+      # sentence plays. The last line of each is what it heard (rms, peak).
+      - name: The helper under three signatures
+        if: always()
+        continue-on-error: true
+        run: |
+          D="$RUNNER_TEMP/sig"; mkdir -p "$D"
+          cp "$APP/Contents/MacOS/mori-sysaudio" "$D/plain"
+          cp "$APP/Contents/MacOS/mori-sysaudio" "$D/runtime"
+          cp "$APP/Contents/MacOS/mori-sysaudio" "$D/runtime_entitled"
+          codesign --force --sign - "$D/plain"
+          codesign --force --sign - --options runtime "$D/runtime"
+          codesign --force --sign - --options runtime --entitlements src-tauri/Entitlements.plist "$D/runtime_entitled"
+          for v in plain runtime runtime_entitled; do
+            echo "## $v"
+            codesign -dvv "$D/$v" 2>&1 | grep CodeDirectory
+            "$D/$v" --seconds 9 --start-timeout 12 > "$R/sig_$v.pcm" 2> "$R/sig_$v.log" &
+            H=$!
+            sleep 2
+            afplay "$R/speech.wav"
+            wait $H || echo "helper exit code $?"
+            cat "$R/sig_$v.log"
+          done
 
       # The whole app, as a user would run it: opened from Finder's point of
       # view, started and stopped with the global shortcut. This step reports;

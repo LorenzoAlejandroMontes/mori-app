@@ -3,7 +3,8 @@
     "externalBin": ["../native/mori-sysaudio/build/mori-sysaudio"],
     "macOS": {
       "minimumSystemVersion": "14.2",
-      "signingIdentity": "-"
+      "signingIdentity": "-",
+      "entitlements": "Entitlements.plist"
     }
   }
 }
