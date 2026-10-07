@@ -38,7 +38,6 @@ mkdir -p "$WORK"
 # the two that open an audio device: the app, which macOS holds responsible for the recorder it
 # starts, and the helper that reads the system audio tap. uv gets none.
 APP_ARGS=(
-    --for-notarization
     --code-signature-flags runtime
     --entitlements-xml-file "$ENT"
     --entitlements-xml-file "Contents/MacOS/mori-sysaudio:$ENT"
@@ -99,7 +98,8 @@ rehearse)
     D="$WORK/rehearsal"; rm -rf "$D"; mkdir -p "$D"
     ditto "$APP" "$D/Mori.app"
     # A certificate nobody trusts, made here and thrown away with the runner. It only shows what
-    # rcodesign writes with these settings: Gatekeeper would refuse it.
+    # rcodesign writes with these settings: Gatekeeper would refuse it. (--for-notarization is
+    # left out here only: rcodesign accepts it with a certificate issued by Apple and no other.)
     "$RC" generate-self-signed-certificate --person-name "Mori signing rehearsal" \
         --profile developer-id-application --pem-unified-filename "$D/throwaway.pem" > /dev/null \
         || { "$RC" generate-self-signed-certificate --help; exit 1; }
@@ -115,7 +115,8 @@ start)
     rm -f "$LOG" "$RCF" "$SJS"
     ARGS=(sign --remote-public-key-pem-file "$CERT")
     if [ "$WHAT" = app ]; then
-        ARGS+=("${APP_ARGS[@]}")
+        # rcodesign refuses to start unless the settings are the ones Apple's notary accepts
+        ARGS+=(--for-notarization "${APP_ARGS[@]}")
     else
         ARGS+=(--binary-identifier "$BUNDLE_ID.dmg")
     fi
