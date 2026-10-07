@@ -10,6 +10,10 @@
 //
 //   mori-sysaudio --seconds 5 > out.pcm      capture five seconds, then exit
 //   mori-sysaudio --until-stdin-closes       what record.py runs
+//   --start-timeout N                        give up (exit 3) if capture has not
+//                                            started after N seconds (default 60:
+//                                            macOS may be waiting for an answer to
+//                                            its permission prompt)
 //
 // Call sequence follows Apple's "Capturing system audio with Core Audio taps".
 
@@ -27,6 +31,8 @@ var total = 0
 var sumSq = 0.0
 var peak = 0.0
 var described = false
+var started = false
+var stage = "starting"
 
 func log(_ s: String) {
     FileHandle.standardError.write(("mori-sysaudio: " + s + "\n").data(using: .utf8)!)
@@ -75,6 +81,7 @@ func defaultOutputUID() -> String {
 
 var seconds: Double?
 var followStdin = false
+var startTimeout = 60.0
 var args = CommandLine.arguments.dropFirst().makeIterator()
 while let a = args.next() {
     switch a {
@@ -83,8 +90,11 @@ while let a = args.next() {
         seconds = v
     case "--until-stdin-closes":
         followStdin = true
+    case "--start-timeout":
+        guard let v = args.next().flatMap(Double.init), v > 0 else { die("--start-timeout needs a number", 2) }
+        startTimeout = v
     case "--help", "-h":
-        print("usage: mori-sysaudio [--seconds N] [--until-stdin-closes]  (16 kHz mono s16le on stdout)")
+        print("usage: mori-sysaudio [--seconds N] [--until-stdin-closes] [--start-timeout N]  (16 kHz mono s16le on stdout)")
         exit(0)
     default:
         die("unknown argument \(a)", 2)
@@ -93,9 +103,21 @@ while let a = args.next() {
 
 signal(SIGPIPE, SIG_IGN)
 
+// Core Audio can block while macOS waits for an answer to "record this
+// computer's audio". Never hang silently: say where, and leave.
+DispatchQueue.global().asyncAfter(deadline: .now() + startTimeout) {
+    if !started {
+        log("no capture after \(Int(startTimeout)) s, stuck while \(stage). Is macOS waiting for the System Audio Recording permission?")
+        exit(3)
+    }
+}
+
 // ---- the tap: one mono mix of every process -----------------------------------
 
+stage = "reading the default output device"
 let outputUID = defaultOutputUID()
+log("output device \(outputUID)")
+stage = "creating the system audio tap"
 
 let tapDesc = CATapDescription(monoGlobalTapButExcludeProcesses: [])
 tapDesc.uuid = UUID()
@@ -104,6 +126,8 @@ tapDesc.isPrivate = true
 tapDesc.muteBehavior = .unmuted
 check(AudioHardwareCreateProcessTap(tapDesc, &tapID), "creating the system audio tap")
 
+log("tap created")
+stage = "reading the tap format"
 var tapFormat = AudioStreamBasicDescription()
 var fmtSize = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
 var fmtAddr = AudioObjectPropertyAddress(
@@ -119,6 +143,7 @@ let inRate = tapFormat.mSampleRate
 
 // ---- a private aggregate device that carries the tap ---------------------------
 
+stage = "creating the aggregate device"
 let aggDesc: [String: Any] = [
     kAudioAggregateDeviceNameKey: "Mori system audio",
     kAudioAggregateDeviceUIDKey: UUID().uuidString,
@@ -136,6 +161,8 @@ check(AudioHardwareCreateAggregateDevice(aggDesc as CFDictionary, &aggID), "crea
 
 // ---- tap rate, float -> 16 kHz, int16 ------------------------------------------
 
+log("aggregate device created, tap rate \(Int(inRate)) Hz")
+stage = "starting the capture"
 guard let inFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: inRate, channels: 1, interleaved: false),
       let outFormat = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: outRate, channels: 1, interleaved: true),
       let converter = AVAudioConverter(from: inFormat, to: outFormat)
@@ -201,6 +228,7 @@ check(AudioDeviceCreateIOProcIDWithBlock(&procID, aggID, ioQueue) { _, inInputDa
     }
 }, "installing the audio callback")
 check(AudioDeviceStart(aggID, procID), "starting the capture")
+started = true
 log("capturing output=\(outputUID) rate=\(Int(inRate)) -> \(Int(outRate)) mono s16le")
 
 // ---- when to stop ---------------------------------------------------------------

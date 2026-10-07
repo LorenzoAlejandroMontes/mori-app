@@ -27,6 +27,8 @@ jobs:
     timeout-minutes: 25
     defaults:
       run:
+        # bash here means "bash -eo pipefail": a failed check behind a pipe fails the step.
+        shell: bash
         working-directory: app
     steps:
       - uses: actions/checkout@v4
@@ -71,41 +73,43 @@ jobs:
           afinfo "$R/speech.wav" | head -6
           osascript -e "set volume output volume 60" || true
 
-      # What a Mac that never said yes looks like. Informational.
-      - name: Helper before any permission
-        continue-on-error: true
-        run: |
-          native/mori-sysaudio/build/mori-sysaudio --seconds 9 > "$R/before.pcm" 2> "$R/before.log" &
-          H=$!
-          ( sleep 20; kill -9 $H 2>/dev/null ) &
-          sleep 2
-          afplay "$R/speech.wav"
-          wait $H || true
-          cat "$R/before.log"
-          .venv/bin/python native/mori-sysaudio/ci_check.py "$R/before.pcm" meeting thursday slides | tee "$R/before.json" || true
-
       # On a user's Mac this is the system prompt "Mori would like to record
-      # this computer's audio". A CI machine has nobody to click it, so the
-      # answer is written where macOS keeps it.
+      # this computer's audio". A CI machine has nobody to click it, and an
+      # unanswered prompt blocks every later capture, so the answer is written
+      # where macOS keeps it BEFORE the first capture.
       - name: Allow system audio recording
         run: |
+          BIN="$PWD/native/mori-sysaudio/build/mori-sysaudio"
           SQL="CREATE TEMP TABLE t AS SELECT * FROM access WHERE service IN ('kTCCServiceMicrophone','kTCCServiceScreenCapture') GROUP BY client;
                UPDATE t SET service='kTCCServiceAudioCapture', auth_value=2;
                INSERT OR REPLACE INTO access SELECT * FROM t;
+               CREATE TEMP TABLE b AS SELECT * FROM t WHERE client LIKE '/%' LIMIT 1;
+               UPDATE b SET client='$BIN', csreq=NULL;
+               INSERT OR REPLACE INTO access SELECT * FROM b;
                SELECT service, client, auth_value FROM access WHERE service='kTCCServiceAudioCapture';"
           echo "## system"; sudo sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" "$SQL"
           echo "## user"; sqlite3 "$HOME/Library/Application Support/com.apple.TCC/TCC.db" "$SQL"
 
       - name: The helper hears the sentence
         run: |
-          native/mori-sysaudio/build/mori-sysaudio --seconds 9 > "$R/helper.pcm" 2> "$R/helper.log" &
-          H=$!
-          ( sleep 20; kill -9 $H 2>/dev/null ) &
+          attempt() {
+            native/mori-sysaudio/build/mori-sysaudio --seconds 9 --start-timeout 12 > "$R/helper.pcm" 2> "$R/helper.log" &
+            H=$!
+            sleep 2
+            afplay "$R/speech.wav"
+            wait $H || echo "helper exit code $?"
+            echo "## helper said"; cat "$R/helper.log"
+            .venv/bin/python native/mori-sysaudio/ci_check.py "$R/helper.pcm" meeting thursday slides | tee "$R/helper.json"
+          }
+          if attempt; then exit 0; fi
+          echo "## first attempt failed: what macOS decided about the permission"
+          log show --last 2m --style compact --predicate 'subsystem == "com.apple.TCC"' 2>/dev/null | grep -i -E "AudioCapture|sysaudio" | tail -40 || true
+          screencapture -x "$R/screen_after_first_attempt.png" || true
+          echo "## restarting the permission daemon and trying once more"
+          sudo killall tccd || true
+          killall tccd || true
           sleep 2
-          afplay "$R/speech.wav"
-          wait $H || true
-          cat "$R/helper.log"
-          .venv/bin/python native/mori-sysaudio/ci_check.py "$R/helper.pcm" meeting thursday slides | tee "$R/helper.json"
+          attempt
 
       - name: Mori's recorder puts it in the "others" channel
         run: |
@@ -126,34 +130,41 @@ jobs:
           echo "## recorder said"; cat "$R/record.out" "$R/record.err"
           echo "## levels while the sentence was playing"; cat "$R/levels_while_playing.json" 2>/dev/null || echo "(none)"
           echo
-          echo "## the others' channel"
-          .venv/bin/python native/mori-sysaudio/ci_check.py "$OUT.sys.wav" meeting thursday slides | tee "$R/others.json"
           echo "## your channel (nobody is speaking: informational)"
           .venv/bin/python native/mori-sysaudio/ci_check.py "$OUT.mic.wav" meeting | tee "$R/you.json" || true
+          echo "## the others' channel"
+          .venv/bin/python native/mori-sysaudio/ci_check.py "$OUT.sys.wav" meeting thursday slides | tee "$R/others.json"
 
-      # What Mori has to notice and say out loud: a "no" gives silence, not an error.
+      # What Mori has to notice and say out loud when the answer was "no".
+      # Informational: it records what a refusal looks like from the helper.
       - name: Helper after the permission is refused
         continue-on-error: true
         run: |
           SQL="UPDATE access SET auth_value=0 WHERE service='kTCCServiceAudioCapture';"
           sudo sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" "$SQL"
           sqlite3 "$HOME/Library/Application Support/com.apple.TCC/TCC.db" "$SQL"
-          native/mori-sysaudio/build/mori-sysaudio --seconds 9 > "$R/refused.pcm" 2> "$R/refused.log" &
+          native/mori-sysaudio/build/mori-sysaudio --seconds 9 --start-timeout 12 > "$R/refused.pcm" 2> "$R/refused.log" &
           H=$!
-          ( sleep 20; kill -9 $H 2>/dev/null ) &
           sleep 2
           afplay "$R/speech.wav"
-          wait $H || true
+          wait $H || echo "helper exit code $?"
           cat "$R/refused.log"
           .venv/bin/python native/mori-sysaudio/ci_check.py "$R/refused.pcm" meeting thursday slides | tee "$R/refused.json" || true
+
+      - name: What macOS logged about the permission
+        if: always()
+        run: |
+          log show --last 6m --style compact --predicate 'subsystem == "com.apple.TCC"' 2>/dev/null | grep -i -E "AudioCapture|sysaudio" | tail -60 > "$R/tcc_log.txt" || true
+          tail -30 "$R/tcc_log.txt"
+          screencapture -x "$R/screen_at_end.png" || true
 
       - name: Summary
         if: always()
         run: |
           {
             echo "### The other side of the call on macOS"
-            for f in before helper others you refused; do
-              [ -f "$R/$f.json" ] && { echo "**$f**"; echo '```json'; cat "$R/$f.json"; echo '```'; }
+            for f in helper others you refused; do
+              if [ -f "$R/$f.json" ]; then echo "**$f**"; echo '```json'; cat "$R/$f.json"; echo '```'; fi
             done
           } >> "$GITHUB_STEP_SUMMARY"
 

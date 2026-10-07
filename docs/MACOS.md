@@ -16,11 +16,13 @@ On Windows Mori records the computer's audio through WASAPI loopback, on its
 own channel, so the transcript knows who said what. The Python library it uses
 has no loopback on macOS.
 
-The plan is a small helper, `mori-sysaudio`, that uses **Core Audio process
-taps** (macOS 14.2+) and hands the audio to the existing recorder. A tap asks
-for the "system audio" permission only: no Screen Recording prompt. The two
-largest open-source recorders on macOS (anarlog and Meetily, both MIT) capture
-this way, through the `cidre` crate.
+A small helper, [`mori-sysaudio`](../app/native/mori-sysaudio/main.swift), uses
+**Core Audio process taps** (macOS 14.2+) and hands the audio to the existing
+recorder. A tap asks for the "system audio" permission only: no Screen
+Recording prompt. The two largest open-source recorders on macOS (anarlog and
+Meetily, both MIT) capture this way. Mori's helper is one Swift file with no
+dependencies: `bash app/native/mori-sysaudio/build.sh` builds it with the Xcode
+command line tools.
 
 First target: Apple Silicon, macOS 14.2 or later.
 
@@ -43,7 +45,6 @@ Security → Open Anyway*.
 
 ## Known gaps today
 
-- No macOS job in CI yet (M0).
 - Shortcut labels say `Ctrl`, and some interface text says "PC" or "Windows".
 - "It looks like you are in a call" relies on the title of the window in
   front, which is Windows-only today.
