@@ -80,14 +80,22 @@ Seen on `macos-latest` (macOS 26.6.2, Apple Silicon):
   while it is still running; `sign-owner.sh`, pointed at an empty folder, finds it, downloads
   it and stops at the missing key (run 37695833142, cancelled after that).
 
-Not seen yet, because it needs the real key:
+Seen with the real key (run 37701746535, signed from the owner's PC):
 
-- A signature made with the Developer ID certificate, and `rcodesign --for-notarization`
-  accepting it (a certificate made on the spot is refused by that check, so the rehearsal
-  runs without it).
-- Apple accepting the app and the `.dmg`, and the two tickets stapled.
-- Gatekeeper's verdict on the notarized app, and the first launch from a quarantined download
-  ending with Mori's window on screen.
+- `rcodesign --for-notarization` accepts the app signed with the Developer ID certificate.
+- Apple accepts the app and the `.dmg`, about a minute each, and both tickets are stapled
+  (`stapler validate` passes on both).
+- `spctl` on both: `accepted`, `source=Notarized Developer ID`. `syspolicy_check distribution`
+  on the installed copy: "App passed all pre-distribution checks".
+- First launch from a quarantined download: macOS asks the one standard question ("Mori is an
+  app downloaded from the Internet... Apple checked it for malicious software and none was
+  detected"), and after *Open* Mori's window is on screen.
+- The proof on that same app: first launch prepares Python, a played call is recorded on both
+  sides with the hardened runtime on, and it is transcribed.
 
-Until a signed run is green, a downloaded `.dmg` opens through *System Settings → Privacy &
-Security → Open Anyway*.
+One thing learned on the way: the signing session on the relay ends after about ten minutes
+with nobody joining it, well before the run stops waiting. Start `sign-owner.sh` right after
+starting the run; it waits for the session by itself.
+
+Not seen: the microphone and audio capture prompts as a person meets them (CI writes the
+answers before the first capture), an Intel Mac, and a macOS older than 26.

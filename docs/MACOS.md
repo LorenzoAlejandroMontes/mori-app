@@ -47,7 +47,7 @@ First target: Apple Silicon, macOS 14.2 or later.
 | M4 | **The other side** | With a known speech file playing, the "others" channel contains it and its transcript matches (✅ in CI, from source and in the app from the `.dmg`); no Screen Recording prompt appeared; denying the permission shows a clear message (still to see in the packaged app) | CI, then Mac |
 | M5 | **No Python to install** | With no `~/.mori/venv` and none of the machine's Pythons on its `PATH`, first launch prepares everything by itself (bundled `uv`, environment in `~/.mori/venv`), then records with it: ✅ in CI on macOS, and on Windows from the installer | CI, then Mac |
 | M6 | **Download and run** | The [release workflow](../.github/workflows/release.yml) builds the `.dmg` and the Windows installer and, on the Windows machine, installs it and opens it (✅ run by hand). On the Mac it takes the app out of the `.dmg` and proves first launch, a recorded call and its transcript on that copy (✅ run by hand). A tag would open a draft release with the two files: no tag has been pushed yet. Steps in [RELEASING.md](RELEASING.md) | CI, then Mac |
-| M7 | **No warning on first open** | The app is signed with a Developer ID and notarized, with the private key kept off the CI machine: the run opens a signing session and the owner joins it. Built and rehearsed with a certificate made on the spot (✅ in CI); the real signature, Apple's ticket and a first launch with no warning are still to see | CI, with the owner |
+| M7 | **No warning on first open** | The app is signed with a Developer ID and notarized, with the private key kept off the CI machine: the run opens a signing session and the owner joins it. ✅ Seen in run 37701746535: the real signature, Apple's ticket on the app and on the `.dmg`, and a quarantined download that opens with the one standard question ("an app downloaded from the Internet", with "Apple checked it for malicious software and none was detected") and then Mori's window | CI, with the owner |
 | M8 | **Faster local Whisper on Apple Silicon** (optional) | Same transcript, measured time reported | Mac |
 
 ### What M1 proves, and what it does not
@@ -125,8 +125,9 @@ bash native/uv/fetch.sh
 pnpm exec tauri build --config src-tauri/tauri.macos-app.conf.json --bundles app,dmg
 ```
 
-Until M7 is seen end to end, a downloaded build opens through *System Settings → Privacy &
-Security → Open Anyway*.
+A build made this way is signed ad hoc, so a downloaded copy of it opens through *System
+Settings → Privacy & Security → Open Anyway*. The `.dmg` of a release is signed with a
+Developer ID and notarized ([RELEASING.md](RELEASING.md)), and opens like any other app.
 
 ## Known gaps today
 

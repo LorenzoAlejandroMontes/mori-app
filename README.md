@@ -44,10 +44,10 @@
 
 ## Install
 
-There is no published release yet. The [Release workflow](.github/workflows/release.yml) builds the two files a release will carry, and each run keeps them for 14 days as artifacts (open the latest run under Actions → Release; downloading artifacts needs a GitHub account):
+Download the file for your computer from the [latest release](https://github.com/LorenzoAlejandroMontes/mori-app/releases/latest):
 
 - **Windows**: `Mori_<version>_x64-setup.exe`, an installer for the current user.
-- **macOS, Apple Silicon**: `Mori_<version>_aarch64.dmg`. It is not signed with an Apple Developer ID yet, so a downloaded copy opens through *System Settings → Privacy & Security → Open Anyway*. How a signed build is made: [docs/RELEASING.md](docs/RELEASING.md).
+- **macOS, Apple Silicon**: `Mori_<version>_aarch64.dmg`. Open it, drag Mori to Applications, open Mori. It is signed with an Apple Developer ID and notarized by Apple, so macOS asks once whether to open an app downloaded from the internet, and that is all. How that build is made: [docs/RELEASING.md](docs/RELEASING.md).
 
 You do not need to install Python: on first launch Mori downloads its own into `~/.mori` (about 300 MB with the audio and transcription libraries, once) and says how far it is under the record button. The other way is to run Mori from source (below).
 
