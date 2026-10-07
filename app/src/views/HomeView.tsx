@@ -15,6 +15,7 @@ import { isAutoTitle } from "../recording-logic";
 import { setTodoStatus, type Todo } from "./todos";
 import { DEFAULT_MY_NAMES } from "./todo-logic";
 import { t, tn } from "../i18n";
+import { assigneeLabel } from "../speakers-logic";
 import QuickKey from "./QuickKey";
 import type { ProviderConfig } from "../llm";
 
@@ -334,7 +335,7 @@ export default function HomeView({
                     const b = bucketOf(td.due);
                     return (
                       <li key={td.id} className="hl-row">
-                        <span className="hl-who">{(td.assignee ?? "").split(/[,/&]/)[0].trim()}</span>
+                        <span className="hl-who">{assigneeLabel((td.assignee ?? "").split(/[,/&]/)[0].trim())}</span>
                         <div className="hl-main">
                           <span className="hl-text">{td.text}</span>
                           {td.source.sessionId && (

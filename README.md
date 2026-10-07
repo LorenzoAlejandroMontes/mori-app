@@ -30,7 +30,7 @@
 |---|---|
 | ![Ask Mori](docs/screenshots/ask-mori.png) | ![A call, its transcript with the two voices](docs/screenshots/call.png) |
 | ![A private call](docs/screenshots/private-call.png) | ![Settings, as a page](docs/screenshots/settings.png) |
-| ![Recording, and "it seems over": stop in 7 s](docs/screenshots/recording-dark.png) | ![⌘K finds what was said](docs/screenshots/cmdk-dark.png) |
+| ![Recording, and "Seems over": it stops by itself unless you keep going](docs/screenshots/recording-dark.png) | ![⌘K finds what was said](docs/screenshots/cmdk-dark.png) |
 
 <sub>Screenshots use invented data from the preview bench (`app/preview/fixtures.ts`). The design rules: [`docs/DESIGN.md`](docs/DESIGN.md).</sub>
 
@@ -39,7 +39,7 @@
 | Platform | Status |
 |---|---|
 | **Windows** | Works today. This is where Mori is used every day. |
-| **macOS** | In progress (Apple Silicon, macOS 14.2+). CI builds a `.dmg`, opens the app from it, and it records both sides of a played call; nobody has run it on a real Mac yet. The plan and where to help: [`docs/MACOS.md`](docs/MACOS.md). |
+| **macOS** | In progress (Apple Silicon, macOS 14.2+). Proven on GitHub's cloud Mac (macOS 26, Apple Silicon), from source and in the packaged app: CI builds a `.dmg`, opens the app from it, the app prepares its own Python, records both sides of a played call and transcribes it. Still to come: someone using it on a Mac on their desk. The plan and where to help: [`docs/MACOS.md`](docs/MACOS.md). |
 | Linux | The app builds and the checks run in CI. Untested beyond that. |
 
 ## Install
@@ -80,7 +80,7 @@ The model is any OpenAI‑compatible endpoint: Groq (free tier, no training on y
 
 ## Getting started (development)
 
-Prerequisites: Node 22, pnpm 10, Rust (stable), Python 3.11+. Mori targets **Windows** (system audio is captured through WASAPI loopback). The backend also builds on macOS and Linux; capturing the other side of a call there needs a loopback device and is untested.
+Prerequisites: Node 22, pnpm 10, Rust (stable), Python 3.11+. Mori is used every day on **Windows** (system audio is captured through WASAPI loopback). On **macOS** 14.2+ a small Swift helper captures it through Core Audio process taps: [`docs/MACOS.md`](docs/MACOS.md). The backend also builds on Linux; capturing the other side of a call there needs a loopback device and is untested.
 
 ```bash
 cd app

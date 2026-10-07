@@ -50,6 +50,33 @@ export function speakerLabel(label: string): string {
   return label;
 }
 
+/** Who a to-do belongs to, as shown on screen. The stored value keeps the
+ *  recorder's "Tu" for the user; a list ("Tu, Sarah") is translated part by
+ *  part, and every name a person typed stays as it is. */
+export function assigneeLabel(assignee: string): string {
+  return assignee
+    .split(/([,/&])/)
+    .map((part) => {
+      const name = part.trim();
+      return name === "Tu" || name === "Interlocutore" ? part.replace(name, speakerLabel(name)) : part;
+    })
+    .join("");
+}
+
+/** The other way round, for what a person types in the "whose is it" field:
+ *  the word the interface shows for the user ("You") is stored as "Tu", so the
+ *  to-do stays theirs. Anything else is stored as typed. */
+export function assigneeStored(typed: string): string {
+  const me = t("Tu").toLowerCase();
+  return typed
+    .split(/([,/&])/)
+    .map((part) => {
+      const name = part.trim();
+      return name && name.toLowerCase() === me ? part.replace(name, "Tu") : part;
+    })
+    .join("");
+}
+
 export function speakerName(label: string, map: SpeakerMap): string {
   return map[label] ?? label;
 }

@@ -17,6 +17,7 @@ import type { OfferUndo } from "../ui/useUndo";
 import { isTyping, moveFocus } from "../ui/keys";
 import { dueLabel } from "../ui/format";
 import { t } from "../i18n";
+import { assigneeLabel, assigneeStored } from "../speakers-logic";
 import { useTabInk } from "../ui/useTabInk";
 import { IconCalendar, IconChevron, IconFile, IconPencil, IconPlus, IconSearch, IconTrash } from "../ui/icons";
 import "./TodosView.css";
@@ -109,6 +110,7 @@ export default function TodosView({
       return (
         t.text.toLowerCase().includes(q) ||
         (t.assignee ?? "").toLowerCase().includes(q) ||
+        assigneeLabel(t.assignee ?? "").toLowerCase().includes(q) ||
         t.source.title.toLowerCase().includes(q)
       );
     });
@@ -326,10 +328,10 @@ export default function TodosView({
                 autoFocus
                 aria-label={t("Di chi è")}
                 placeholder={t("di chi è")}
-                defaultValue={td.assignee ?? ""}
-                onBlur={(e) => patch(td, { assignee: e.target.value })}
+                defaultValue={td.assignee ? assigneeLabel(td.assignee) : ""}
+                onBlur={(e) => patch(td, { assignee: assigneeStored(e.target.value) })}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") patch(td, { assignee: (e.target as HTMLInputElement).value });
+                  if (e.key === "Enter") patch(td, { assignee: assigneeStored((e.target as HTMLInputElement).value) });
                   if (e.key === "Escape") {
                     e.stopPropagation();
                     setEditing(null);
@@ -343,7 +345,7 @@ export default function TodosView({
                 title={t("Clicca per cambiare a chi tocca")}
                 onClick={() => setEditing({ id: td.id, field: "who" })}
               >
-                {td.assignee ?? t("di chi?")}
+                {td.assignee ? assigneeLabel(td.assignee) : t("di chi?")}
               </button>
             )}
           </div>

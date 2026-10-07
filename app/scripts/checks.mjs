@@ -106,6 +106,7 @@ async function main() {
     "companion-logic",
     "ui/markdown-logic",
     "views/home-logic",
+    "views/todo-logic",
     "search-logic",
     "speakers-logic",
     "brief",
@@ -928,6 +929,39 @@ async function privacyAndNewChecks({ mods, d, makeSession }) {
   eq("le voci da nominare", sp.otherLabelsIn([{ speaker: "Tu" }, { speaker: "Interlocutore" }], "").join(","), "Interlocutore");
   eq("anche da un trascritto semplice", sp.otherLabelsIn([], "Tu: x\nInterlocutore: y").join(","), "Interlocutore");
   eq("un trascritto importato non ne ha", sp.otherLabelsIn([], "Giulia: x\nMarco: y").length, 0);
+
+  // "Tu" is what is stored for the user; the screen says it in its language.
+  const i18nSp = mods["i18n/index"];
+  i18nSp.useLangNow("en");
+  eq("in inglese il mio da fare dice You", sp.assigneeLabel("Tu"), "You");
+  eq("anche dentro una lista", sp.assigneeLabel("Tu, Sarah"), "You, Sarah");
+  eq("un nome scritto a mano resta com'è", sp.assigneeLabel("Tullio"), "Tullio");
+  eq("e anche un nome che contiene Tu", sp.assigneeLabel("Tu Nguyen"), "Tu Nguyen");
+  eq("You scritto nel campo torna Tu nei dati", sp.assigneeStored("you"), "Tu");
+  eq("un altro nome si salva come scritto", sp.assigneeStored("Sarah Lee"), "Sarah Lee");
+  check("il da fare assegnato a You resta mio", mods["views/todo-logic"].isMine({ assignee: sp.assigneeStored("You"), text: "x", commitments: [] }));
+  const mdYou = mods["export-logic"].callToMarkdown({ title: "x", startedAt: null, participants: ["Interlocutore"], categories: [], summary: "", actions: [{ text: "send the deck", assignee: "Tu", due: null, done: false }] });
+  check("la call esportata dice You, e non Interlocutore", mdYou.includes("send the deck — You") && !mdYou.includes("Interlocutore"), mdYou);
+  i18nSp.useLangNow("it");
+  eq("in italiano resta Tu", sp.assigneeLabel("Tu, Sarah"), "Tu, Sarah");
+  // No view puts a stored owner on screen without the translation: a line of
+  // JSX that prints `.assignee` (as a child or as a field's value) names assigneeLabel.
+  {
+    const raw = [];
+    const walk = (dir) => {
+      for (const f of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, f.name);
+        if (f.isDirectory()) walk(full);
+        else if (f.name.endsWith(".tsx")) {
+          fs.readFileSync(full, "utf8").split("\n").forEach((line, i) => {
+            if (/(^\s*\{|>\s*\{|defaultValue=\{)[^}]*\.assignee\b/.test(line) && !line.includes("assigneeLabel")) raw.push(`${f.name}:${i + 1}`);
+          });
+        }
+      }
+    };
+    walk(path.join(appRoot, "src"));
+    eq("nessuna vista mostra l'assegnatario senza tradurlo", raw.join(" | "), "");
+  }
 
   // End to end: naming the voice reaches the recall chunks and the model.
   await makeSession("sp1", "Call con nome", "Tu: allora ci vediamo?\nInterlocutore: ti mando il budget entro venerdì");

@@ -6,7 +6,7 @@ import type { ActionItem, Category, CategoryCount } from "../../db";
 import type { SessionJob } from "../../jobs";
 import { jobLabel, isWaitingNotice, noticeText, retrySession } from "../../jobs";
 import type { Entity } from "../people";
-import { applySpeakerMap, otherLabelsIn, relabelText, speakerLabel } from "../../speakers-logic";
+import { applySpeakerMap, assigneeLabel, otherLabelsIn, relabelText, speakerLabel } from "../../speakers-logic";
 import Markdown from "../../ui/Markdown";
 import Dragon from "../../ui/Mark";
 import Menu from "../../ui/Menu";
@@ -278,7 +278,7 @@ export default function CallView({
                       {i > 0 && ", "}
                       <button
                         className="person-link"
-                        title={t("Apri la scheda di {name}", { name: p.display_name })}
+                        title={t("Apri la scheda di {name}", { name: speakerLabel(p.display_name) })}
                         onClick={() => onOpenPersonByName(p.display_name)}
                       >
                         {speakerLabel(p.display_name)}
@@ -515,7 +515,7 @@ export default function CallView({
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
                           </button>
                           <span className="action-text">{a.text}</span>
-                          {a.assignee && <span className="who-chip">{a.assignee}</span>}
+                          {a.assignee && <span className="who-chip">{assigneeLabel(a.assignee)}</span>}
                         </li>
                       ))}
                     </ul>

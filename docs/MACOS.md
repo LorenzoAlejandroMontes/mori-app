@@ -6,9 +6,10 @@ for Apple Silicon ([workflow](../.github/workflows/macos-app.yml)). On every
 change a GitHub Mac takes the app out of that `.dmg` and opens it with no
 Python installed for it: Mori prepares its own, then a recording is started
 with `Cmd+Shift+R`, a known sentence is played, and Mori's "others" channel
-has to contain it. What is missing: a published release to download it from, a
-signature macOS trusts, and a person looking at it on a real Mac. This page is
-the plan. The research behind it, with sources for every claim, is in
+has to contain it. All of this is proven on GitHub's cloud Mac (macOS 26,
+Apple Silicon), from source and in the packaged app. What is missing: a
+published release to download it from, a signature macOS trusts, and a person
+using it on a Mac on their desk. This page is the plan. The research behind it, with sources for every claim, is in
 [`research/macos.md`](research/macos.md).
 
 The maintainer has no Mac. Milestones marked **CI** can be proven by GitHub
@@ -107,9 +108,9 @@ Seen in the same workflow, on the app taken from the `.dmg`:
   in the levels the interface reads, exits normally, and the microphone file
   is a valid recording of the whole time.
 
-Not seen: the floating pill, the transcript on the call's page (the
-screenshot was taken too early), the warning as a person reads it in the
-interface, and the setup on a slow or absent network (the strip offers "Try
+Not seen: the floating pill, the transcript as the call's page shows it (it is
+checked in the database, not on screen), the warning as a person reads it in
+the interface, and the setup on a slow or absent network (the strip offers "Try
 again"; its two states were looked at in the preview bench, not on a Mac).
 
 The macOS-only bundle settings live in

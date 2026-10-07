@@ -2,6 +2,7 @@
 // as a human-readable copy outside Mori (DECISIONS.md, decision 3: export as the
 // anti lock-in backup). Pure: the DB reads live in followup.ts.
 import { locale, t } from "./i18n";
+import { assigneeLabel, speakerLabel } from "./speakers-logic";
 
 export type ExportCall = {
   title: string;
@@ -35,7 +36,7 @@ export function callToMarkdown(c: ExportCall): string {
   const meta: string[] = [];
   const day = fmtDay(c.startedAt);
   if (day) meta.push(day);
-  if (c.participants.length) meta.push(c.participants.join(", "));
+  if (c.participants.length) meta.push(c.participants.map(speakerLabel).join(", "));
   if (c.categories.length) meta.push(c.categories.map((x) => `#${x.replace(/\s+/g, "-")}`).join(" "));
   if (meta.length) out.push(`_${meta.join(" · ")}_`);
   if (c.private) out.push("> " + t("Call privata: letta solo da un modello locale."));
@@ -50,7 +51,7 @@ export function callToMarkdown(c: ExportCall): string {
   if (c.actions.length) {
     out.push("", "## " + t("Da fare"));
     for (const a of c.actions) {
-      const who = a.assignee ? ` — ${a.assignee}` : "";
+      const who = a.assignee ? ` — ${assigneeLabel(a.assignee)}` : "";
       const due = a.due ? ` (${t("entro {due}", { due: a.due })})` : "";
       out.push(`- [${a.done ? "x" : " "}] ${a.text}${who}${due}`);
     }

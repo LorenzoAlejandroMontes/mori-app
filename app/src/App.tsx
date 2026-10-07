@@ -103,13 +103,8 @@ import ReadyToast, { type Ready } from "./views/ReadyToast";
 import { useRecorder } from "./views/recording/useRecorder";
 import { t, tn } from "./i18n";
 import { ensureSetup } from "./setup";
+import { speakerLabel } from "./speakers-logic";
 
-/** A recorder label as shown: the stored value stays Italian, the text follows the language. */
-function speakerLabel(label: string): string {
-  if (label === "Interlocutore") return t("Interlocutore");
-  if (label === "Tu") return t("Tu");
-  return label;
-}
 
 export default function App() {
   const [sessions, setSessions] = useState<Session[]>([]);
