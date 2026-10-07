@@ -70,13 +70,19 @@ for f in "$KEY" "$CERT" "$ASC"; do [ -f "$f" ] || say "note: $f is not there yet
 
 # Wait for an artifact of this run and print its id. Stops if the run ends without it.
 wait_artifact() {
-    local name="$1" id status
+    local name="$1" id status since
     say "waiting for $name" >&2
     while :; do
+        # A run started again keeps the artifacts of its earlier attempts, and their signing
+        # sessions are over: only what this attempt made counts.
+        since="$(api "$API/actions/runs/$RUN" | "$PYTHON" -c '
+import json, sys
+print(json.load(sys.stdin).get("run_started_at") or "")')" || since=""
         id="$(api "$API/actions/runs/$RUN/artifacts?per_page=100" | "$PYTHON" -c '
 import json, sys
-ids = [a["id"] for a in json.load(sys.stdin)["artifacts"] if a["name"] == sys.argv[1] and not a["expired"]]
-print(max(ids) if ids else "")' "$name")" || id=""
+ids = [a["id"] for a in json.load(sys.stdin)["artifacts"]
+       if a["name"] == sys.argv[1] and not a["expired"] and a["created_at"] >= sys.argv[2]]
+print(max(ids) if ids else "")' "$name" "$since")" || id=""
         [ -n "$id" ] && { echo "$id"; return 0; }
         status="$(api "$API/actions/runs/$RUN" | "$PYTHON" -c '
 import json, sys

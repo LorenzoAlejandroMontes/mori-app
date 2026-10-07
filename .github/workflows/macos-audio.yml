@@ -68,8 +68,7 @@ jobs:
 
       - name: A sentence to play
         run: |
-          say -o "$R/speech.aiff" "[[slnc 500]] Hello Sarah, the meeting moved to Thursday at three. Can you bring the slides?"
-          afconvert -f WAVE -d LEI16@16000 -c 1 "$R/speech.aiff" "$R/speech.wav"
+          bash "$GITHUB_WORKSPACE/tools/release/mac/make-speech.sh" "$R"
           afinfo "$R/speech.wav" | head -6
           osascript -e "set volume output volume 60" || true
 

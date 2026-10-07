@@ -37,8 +37,7 @@ restore() { [ -d scripts.checkout ] && mv scripts.checkout scripts || true; }
 trap restore EXIT
 
 echo "## a sentence to play"
-say -o "$R/speech.aiff" "[[slnc 500]] Hello Sarah, the meeting moved to Thursday at three. Can you bring the slides?"
-afconvert -f WAVE -d LEI16@16000 -c 1 "$R/speech.aiff" "$R/speech.wav"
+bash "$(dirname "$0")/make-speech.sh" "$R"
 osascript -e "set volume output volume 60" || true
 
 # On a person's Mac these are two system questions. Nobody can click them here, and an unanswered
