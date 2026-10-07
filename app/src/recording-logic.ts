@@ -6,7 +6,19 @@
 // the DEFAULT output). A call routed to Bluetooth headphones that are not the
 // default device, or a mic muted in Windows, records an hour of silence on one
 // channel — and nobody found out until the transcript came back half empty.
-import { t } from "./i18n";
+import { locale, t } from "./i18n";
+
+/** What a recording is called until Mori has understood it: "Registrazione 07 ott 14:22", "Recording 07 Oct 14:22". */
+export function autoTitle(d: Date): string {
+  const day = d.toLocaleDateString(locale(), { day: "2-digit", month: "short" });
+  const time = d.toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" });
+  return `${t("Registrazione")} ${day} ${time}`;
+}
+
+/** A title Mori gave by itself, in either language: the only kind it may replace. */
+export function isAutoTitle(title: string): boolean {
+  return /^(Registrazione|Recording|Call senza titolo|Untitled call)/.test(title);
+}
 
 export type Levels = {
   /** Loudness (RMS, 0…1) of the last block on each channel. */

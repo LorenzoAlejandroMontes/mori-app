@@ -34,7 +34,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 
 use tauri::image::Image;
-use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{
     AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition, WebviewUrl, WebviewWindowBuilder,
@@ -42,7 +42,11 @@ use tauri::{
 };
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
-pub const DEFAULT_HOTKEY: &str = "Ctrl+Shift+R";
+/// Command on a Mac, Ctrl everywhere else. It must match `defaultHotkey()` in
+/// src/ui/platform.ts.
+pub const DEFAULT_HOTKEY: &str = if cfg!(target_os = "macos") { "Cmd+Shift+R" } else { "Ctrl+Shift+R" };
+/// "Quit Mori" in the macOS menu bar (Cmd+Q).
+const APP_QUIT_ID: &str = "app-quit";
 const TRAY_ID: &str = "mori-tray";
 const PILL_LABEL: &str = "pill";
 
@@ -54,10 +58,38 @@ pub const EV_QUIT_REQUEST: &str = "companion://quit-request";
 pub const EV_PILL: &str = "companion://pill";
 pub const EV_PILL_ACTION: &str = "companion://pill-action";
 
+/// The words of the tray menu. They start in Italian, like every key of the
+/// dictionary; the frontend sends them in the user's language as soon as it
+/// is up (`companion_set_labels`).
+#[derive(serde::Deserialize, Clone, Debug)]
+pub struct Labels {
+    record: String,
+    stop: String,
+    open: String,
+    quit: String,
+    quit_recording: String,
+    tip_recording: String,
+}
+
+impl Default for Labels {
+    fn default() -> Self {
+        Labels {
+            record: "Registra la call".into(),
+            stop: "Ferma e trascrivi".into(),
+            open: "Apri Mori".into(),
+            quit: "Esci".into(),
+            quit_recording: "Esci · fermo la registrazione".into(),
+            tip_recording: "Mori · sto registrando".into(),
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct Companion {
+    labels: Mutex<Labels>,
     /// La voce di menu che cambia testo tra "Registra la call" e "Ferma e trascrivi".
     toggle_item: Mutex<Option<MenuItem<Wry>>>,
+    open_item: Mutex<Option<MenuItem<Wry>>>,
     /// La voce "Esci", che avvisa quando c'è una registrazione in corso.
     quit_item: Mutex<Option<MenuItem<Wry>>>,
     /// Icona a riposo e icona con il pallino corallo.
@@ -76,6 +108,8 @@ pub struct Companion {
     /// lo alza `start_recording` PRIMA di lanciare record.py e lo abbassa il
     /// frontend solo a call creata e trascrizione in coda.
     unsaved: AtomicBool,
+    /// "Esci" è già stato chiesto e si sta aspettando il salvataggio.
+    quitting: AtomicBool,
     /// Chiudere la finestra la nasconde invece di uscire.
     close_to_tray: AtomicBool,
     /// Falso se l'icona nella barra non è stata creata: senza icona, nascondere
@@ -185,7 +219,8 @@ pub fn setup(app: &AppHandle) {
         .tooltip("Mori")
         .menu(&menu)
         // Click sinistro = apri la finestra, non apri il menu (il menu sta sul destro).
-        .show_menu_on_left_click(false)
+        // On a Mac a click on a menu bar icon opens its menu, so there it does.
+        .show_menu_on_left_click(cfg!(target_os = "macos"))
         .on_menu_event(|app, event| match event.id.as_ref() {
             "toggle" => {
                 let _ = app.emit(EV_TOGGLE, ());
@@ -201,7 +236,9 @@ pub fn setup(app: &AppHandle) {
                 ..
             } = event
             {
-                show_main(tray.app_handle());
+                if !cfg!(target_os = "macos") {
+                    show_main(tray.app_handle());
+                }
             }
         });
     if let Some((idle, _)) = state.icons.lock().unwrap().as_ref() {
@@ -219,6 +256,7 @@ pub fn setup(app: &AppHandle) {
         }
     }
     *state.toggle_item.lock().unwrap() = Some(toggle);
+    *state.open_item.lock().unwrap() = Some(open);
     *state.quit_item.lock().unwrap() = Some(quit);
 
     // Chiudere la finestra la nasconde: registrazione e trascrizioni in corso
@@ -248,7 +286,87 @@ pub fn setup(app: &AppHandle) {
     }
 }
 
-fn show_main(app: &AppHandle) {
+/// The menu bar of a Mac app, with Mori's own "Quit": the stock one ends the
+/// process on Cmd+Q without asking, and during a call that leaves record.py
+/// running with nobody to stop it. This one goes through `request_quit`, the
+/// same door as the tray. Edit is there because without it Cmd+C/V/X/A do
+/// nothing in a text field. Only installed on macOS (see `setup_app_menu`).
+fn app_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
+    let quit = MenuItem::with_id(app, APP_QUIT_ID, "Quit Mori", true, Some("Cmd+Q"))?;
+    let mori = Submenu::with_items(
+        app,
+        "Mori",
+        true,
+        &[
+            &PredefinedMenuItem::about(app, None, None)?,
+            &PredefinedMenuItem::separator(app)?,
+            &PredefinedMenuItem::hide(app, None)?,
+            &PredefinedMenuItem::hide_others(app, None)?,
+            &PredefinedMenuItem::show_all(app, None)?,
+            &PredefinedMenuItem::separator(app)?,
+            &quit,
+        ],
+    )?;
+    let edit = Submenu::with_items(
+        app,
+        "Edit",
+        true,
+        &[
+            &PredefinedMenuItem::undo(app, None)?,
+            &PredefinedMenuItem::redo(app, None)?,
+            &PredefinedMenuItem::separator(app)?,
+            &PredefinedMenuItem::cut(app, None)?,
+            &PredefinedMenuItem::copy(app, None)?,
+            &PredefinedMenuItem::paste(app, None)?,
+            &PredefinedMenuItem::select_all(app, None)?,
+        ],
+    )?;
+    let window = Submenu::with_items(
+        app,
+        "Window",
+        true,
+        &[
+            &PredefinedMenuItem::minimize(app, None)?,
+            &PredefinedMenuItem::maximize(app, None)?,
+            &PredefinedMenuItem::separator(app)?,
+            &PredefinedMenuItem::close_window(app, None)?,
+        ],
+    )?;
+    Menu::with_items(app, &[&mori, &edit, &window])
+}
+
+/// Called once at startup. Windows and Linux keep having no menu bar.
+pub fn setup_app_menu(app: &AppHandle) {
+    if !cfg!(target_os = "macos") {
+        return;
+    }
+    match app_menu(app) {
+        Ok(menu) => {
+            if let Err(e) = app.set_menu(menu) {
+                eprintln!("companion: menu bar not set: {e}");
+            }
+        }
+        Err(e) => eprintln!("companion: menu bar not built: {e}"),
+    }
+    app.on_menu_event(|app, event| {
+        if event.id.as_ref() == APP_QUIT_ID {
+            request_quit(app);
+        }
+    });
+}
+
+/// The system is asking Mori to end without going through its own "Quit"
+/// (the Dock's Quit, a logout). True means: not yet, a call is being stopped
+/// and saved first; `request_quit` exits when the frontend is done.
+pub fn hold_exit(app: &AppHandle) -> bool {
+    if !must_hold_quit(&app.state::<Companion>()) {
+        return false;
+    }
+    request_quit(app);
+    true
+}
+
+pub fn show_main(app: &AppHandle) {
     if let Some(w) = app.get_webview_window("main") {
         let _ = w.show();
         let _ = w.unminimize();
@@ -281,6 +399,10 @@ fn request_quit(app: &AppHandle) {
     let state = app.state::<Companion>();
     if !must_hold_quit(&state) {
         app.exit(0);
+        return;
+    }
+    // Asked twice (Cmd+Q pressed again while saving): one stop, one timer.
+    if state.quitting.swap(true, Ordering::SeqCst) {
         return;
     }
     let _ = app.emit(EV_QUIT_REQUEST, ());
@@ -500,18 +622,39 @@ pub async fn companion_pill_action(app: AppHandle, action: String) -> Result<(),
 pub async fn companion_set_recording(app: AppHandle, on: bool) -> Result<(), String> {
     let state = app.state::<Companion>();
     state.recording.store(on, Ordering::SeqCst);
-    if let Some(item) = state.toggle_item.lock().unwrap().as_ref() {
-        let _ = item.set_text(if on { "Ferma e trascrivi" } else { "Registra la call" });
-    }
-    if let Some(item) = state.quit_item.lock().unwrap().as_ref() {
-        let _ = item.set_text(if on { "Esci · fermo la registrazione" } else { "Esci" });
-    }
+    apply_labels(&app);
     if let Some(tray) = app.tray_by_id(TRAY_ID) {
         if let Some((idle, rec)) = state.icons.lock().unwrap().as_ref() {
             let _ = tray.set_icon(Some(if on { rec.clone() } else { idle.clone() }));
         }
-        let _ = tray.set_tooltip(Some(if on { "Mori · sto registrando" } else { "Mori" }));
     }
+    Ok(())
+}
+
+/// Writes the tray menu and the tooltip for the current state and language.
+fn apply_labels(app: &AppHandle) {
+    let state = app.state::<Companion>();
+    let l = state.labels.lock().unwrap().clone();
+    let on = state.recording.load(Ordering::SeqCst);
+    if let Some(item) = state.toggle_item.lock().unwrap().as_ref() {
+        let _ = item.set_text(if on { &l.stop } else { &l.record });
+    }
+    if let Some(item) = state.open_item.lock().unwrap().as_ref() {
+        let _ = item.set_text(&l.open);
+    }
+    if let Some(item) = state.quit_item.lock().unwrap().as_ref() {
+        let _ = item.set_text(if on { &l.quit_recording } else { &l.quit });
+    }
+    if let Some(tray) = app.tray_by_id(TRAY_ID) {
+        let _ = tray.set_tooltip(Some(if on { l.tip_recording.as_str() } else { "Mori" }));
+    }
+}
+
+/// The tray menu in the language of the interface.
+#[tauri::command]
+pub async fn companion_set_labels(app: AppHandle, labels: Labels) -> Result<(), String> {
+    *app.state::<Companion>().labels.lock().unwrap() = labels;
+    apply_labels(&app);
     Ok(())
 }
 
@@ -582,4 +725,18 @@ pub async fn recording_levels(wav: String) -> Result<Option<String>, String> {
     tauri::async_runtime::spawn_blocking(move || std::fs::read_to_string(format!("{wav}.levels")).ok())
         .await
         .map_err(|e| format!("task fallita: {e}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A default nobody can register would leave Mori without a shortcut, and
+    /// without the tray menu that shows it. Both spellings, on every machine.
+    #[test]
+    fn the_default_shortcut_is_one_the_system_accepts() {
+        assert!(DEFAULT_HOTKEY.parse::<Shortcut>().is_ok(), "{DEFAULT_HOTKEY}");
+        assert!("Cmd+Shift+R".parse::<Shortcut>().is_ok());
+        assert!("Ctrl+Shift+R".parse::<Shortcut>().is_ok());
+    }
 }

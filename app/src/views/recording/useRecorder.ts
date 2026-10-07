@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
-import { channelIssue, parseLevels, type ChannelIssue, type Levels } from "../../recording-logic";
+import { autoTitle, channelIssue, parseLevels, type ChannelIssue, type Levels } from "../../recording-logic";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { enqueueJob, pumpJobs, type SessionJob } from "../../jobs";
 import { addRecordingPlaceholder } from "../../ingest";
@@ -23,6 +23,7 @@ import {
   COUNTDOWN_SECS,
 } from "../../companion";
 import { fmtClock } from "../../ui/format";
+import { hotkeyLabel } from "../../ui/keys";
 import { useTranscribeProgress, useUnderstanding } from "../../progress";
 import { understandLine } from "../../progress-logic";
 import { t, tn } from "../../i18n";
@@ -163,7 +164,7 @@ export function useRecorder({
         kind: "started",
         title: t("Registrazione avviata"),
         subtitle: t("Tu e l'interlocutore"),
-        hint: t("{key} per fermare", { key: hotkey }),
+        hint: t("{key} per fermare", { key: hotkeyLabel(hotkey) }),
       });
     } else if (was && !recording) {
       void setTrayRecording(false);
@@ -411,7 +412,7 @@ export function useRecorder({
           // Fast: stop + wait for the WAV to be saved (no transcription here).
           const wav = await stopRecording(paths);
           const d = new Date();
-          const title = `Registrazione ${d.toLocaleDateString("it-IT", { day: "2-digit", month: "short" })} ${d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}`;
+          const title = autoTitle(d);
           // Show the call immediately as "transcribing" — the app stays free.
           const id = await addRecordingPlaceholder(title);
           // Hand the rest to the durable queue: transcribe → organize survive a

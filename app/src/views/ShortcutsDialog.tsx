@@ -2,20 +2,22 @@
 // a view that adds shortcuts adds them here.
 import Dialog from "../ui/Dialog";
 import { hotkeyParts } from "../ui/keys";
+import { modKey } from "../ui/platform";
 import { t } from "../i18n";
 
 /** Key combos, and what separates them: "…" a range, "/" alternatives. */
 type Row = [keys: string[][], what: string, sep?: "…" | "/"];
 
 export default function ShortcutsDialog({ hotkey, onClose }: { hotkey: string; onClose: () => void }) {
+  const mod = modKey();
   const groups: [string, Row[]][] = [
     [
       t("Ovunque"),
       [
-        [[["Ctrl", "K"]], t("Cerca o chiedi")],
-        [[["Ctrl", "1"], ["Ctrl", "5"]], t("Oggi, Chiedi a Mori, Da fare, Persone, Tutte le call"), "…"],
-        [[["Ctrl", ","]], t("Impostazioni")],
-        [[["Ctrl", "\\"]], t("Mostra o nascondi la barra laterale")],
+        [[[mod, "K"]], t("Cerca o chiedi")],
+        [[[mod, "1"], [mod, "5"]], t("Oggi, Chiedi a Mori, Da fare, Persone, Tutte le call"), "…"],
+        [[[mod, ","]], t("Impostazioni")],
+        [[[mod, "\\"]], t("Mostra o nascondi la barra laterale")],
         [[hotkeyParts(hotkey)], t("Registra o ferma, anche con Mori dietro altre finestre")],
         [[["?"]], t("Questo pannello")],
         [[["Esc"]], t("Chiudi")],
@@ -26,9 +28,9 @@ export default function ShortcutsDialog({ hotkey, onClose }: { hotkey: string; o
       [
         [[["J"], ["K"]], t("Call successiva, precedente")],
         [[["1"], ["2"], ["3"]], t("Sintesi, Trascritto, Da fare")],
-        [[["Ctrl", "J"]], t("Apri o chiudi la chat accanto")],
+        [[[mod, "J"]], t("Apri o chiudi la chat accanto")],
         [[["Esc"]], t("Chiudi la chat, poi torna indietro")],
-        [[["Ctrl", "Z"]], t("Annulla l'ultima eliminazione, finché c'è l'avviso")],
+        [[[mod, "Z"]], t("Annulla l'ultima eliminazione, finché c'è l'avviso")],
       ],
     ],
     [

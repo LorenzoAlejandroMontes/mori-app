@@ -114,7 +114,12 @@ async function main() {
     "i18n/en",
     "recorder",
     "recording-logic",
+    "ui/platform",
+    "ui/keys",
   ]);
+  // Node on a Mac says it is a Mac: the checks below assert the Windows
+  // wording, wherever they run. Section 28 asks for both.
+  mods["ui/platform"].usePlatformNow(false);
   // The modules speak the language of the machine (Node's navigator says
   // en-US): the checks below assert the Italian, so Italian it is.
   mods["i18n/index"].useLangNow("it");
@@ -481,6 +486,7 @@ async function main() {
   await understandingChecks({ mods, d, makeSession });
   await fallbackChecks({ mods, d, makeSession });
   liveChannelChecks({ mods });
+  platformChecks({ mods });
 
   // =========================================================================
   // Optional: run the real recall against a COPY of a real database, to prove the
@@ -1257,6 +1263,50 @@ function liveChannelChecks({ mods }) {
   check("onda: la soglia del silenzio si muove appena", rl.waveLevel(0.01) < 0.2, String(rl.waveLevel(0.01)));
   check("onda: una voce normale si vede bene", rl.waveLevel(0.08) > 0.6, String(rl.waveLevel(0.08)));
   eq("onda: non oltre il massimo", rl.waveLevel(2), 1);
+}
+
+// One interface, two computers: on a Mac the keys and the words are the Mac's.
+function platformChecks({ mods }) {
+  const pf = mods["ui/platform"];
+  const keys = mods["ui/keys"];
+  const i18n = mods["i18n/index"];
+  const rl = mods["recording-logic"];
+
+  // -----------------------------------------------------------------------
+  section("28 · su un Mac i tasti e le parole sono quelli del Mac");
+  eq("scorciatoia di partenza su Windows", pf.defaultHotkey(false), "Ctrl+Shift+R");
+  eq("scorciatoia di partenza su Mac", pf.defaultHotkey(true), "Cmd+Shift+R");
+  eq("i tasti su Windows", keys.hotkeyParts("Ctrl+Shift+R", false).join(" "), "Ctrl ⇧ R");
+  eq("i tasti su Mac", keys.hotkeyParts("Cmd+Shift+R", true).join(" "), "⌘ ⇧ R");
+  eq("CommandOrControl è Ctrl su Windows", keys.hotkeyParts("CommandOrControl+K", false).join(" "), "Ctrl K");
+  eq("CommandOrControl è ⌘ su Mac", keys.hotkeyParts("CommandOrControl+K", true).join(" "), "⌘ K");
+  eq("chi ha scelto Control su Mac lo vede", keys.hotkeyParts("Ctrl+Alt+R", true).join(" "), "⌃ ⌥ R");
+  eq("dentro una frase, su Windows resta com'è scritta", keys.hotkeyLabel("Ctrl+Shift+R", false), "Ctrl+Shift+R");
+  eq("dentro una frase, su Mac", keys.hotkeyLabel("Cmd+Shift+R", true), "⌘⇧R");
+  eq("una combinazione su Windows", pf.combo("1", false), "Ctrl 1");
+  eq("una combinazione su Mac", pf.combo("1", true), "⌘1");
+  eq("su Windows il testo non cambia", pf.platformText("Search or ask (Ctrl K)", false), "Search or ask (Ctrl K)");
+  eq("su Mac: ⌘", pf.platformText("Search or ask (Ctrl K)", true), "Search or ask (⌘K)");
+  eq("su Mac: il PC è un Mac", pf.platformText("It stays on your PC.", true), "It stays on your Mac.");
+  eq("su Mac: Windows è macOS", pf.platformText("Mori listens to Windows' default audio output.", true), "Mori listens to macOS's default audio output.");
+  eq("su Mac: la barra è la barra dei menu", pf.platformText("from the tray menu too", true), "from the menu bar too");
+  eq("le finestre restano finestre", pf.platformText("behind other windows", true), "behind other windows");
+
+  // Every sentence of the English dictionary, as a Mac shows it.
+  const left = Object.values(mods["i18n/en"].EN).filter((v) => /Ctrl|PC|Windows|tray/.test(pf.platformText(v, true)));
+  eq("in inglese su Mac non resta nessun Ctrl, PC, Windows o tray", left.join(" | "), "");
+
+  pf.usePlatformNow(true);
+  i18n.useLangNow("en");
+  eq("t() parla da Mac", i18n.t("Cerca o chiedi (Ctrl K)"), "Search or ask (⌘K)");
+  eq("ciò che scrive l'utente non si tocca", i18n.t("Sul tuo PC ({host}): non esce niente.", { host: "PC-di-Anna" }), "On your Mac (PC-di-Anna): nothing leaves it.");
+  check("il titolo di una registrazione è in inglese", /^Recording \d\d \w{3},? \d\d:\d\d$/.test(rl.autoTitle(new Date(2026, 9, 7, 14, 22))), rl.autoTitle(new Date(2026, 9, 7, 14, 22)));
+  pf.usePlatformNow(false);
+  eq("t() su Windows è quello di sempre", i18n.t("Cerca o chiedi (Ctrl K)"), "Search or ask (Ctrl K)");
+  i18n.useLangNow("it");
+  check("il titolo in italiano resta quello di prima", /^Registrazione 07 ott,? 14:22$/.test(rl.autoTitle(new Date(2026, 9, 7, 14, 22))), rl.autoTitle(new Date(2026, 9, 7, 14, 22)));
+  check("un titolo dato da Mori si riconosce, in tutte e due le lingue", rl.isAutoTitle("Registrazione 07 ott 14:22") && rl.isAutoTitle("Recording 07 Oct 14:22") && rl.isAutoTitle("Call senza titolo"));
+  check("un titolo scelto dall'utente no", !rl.isAutoTitle("Kickoff Mori"));
 }
 
 main().catch((e) => {

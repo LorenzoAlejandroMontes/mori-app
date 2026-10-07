@@ -217,12 +217,18 @@ jobs:
           sleep 12
           echo "## processes"; pgrep -fl "Mori.app" || { echo "the app is not running"; cat "$R/app.err" || true; exit 1; }
           screencapture -x "$R/app_open.png"
+          # The menu behind the menu bar icon, in the language of the interface.
+          osascript -e 'tell application "System Events" to tell process "mori" to click menu bar item 1 of menu bar 2' 2>&1 || echo "could not open the menu bar icon's menu"
+          sleep 1
+          screencapture -x "$R/app_menu_bar_icon.png"
+          osascript -e 'tell application "System Events" to key code 53' 2>&1 || true
+          sleep 1
           echo "## windows"
           osascript -e 'tell application "System Events" to get {name, position, size} of every window of process "mori"' 2>&1 || true
           osascript -e 'tell application "System Events" to get name of every process whose background only is false' 2>&1 || true
 
           echo "## shortcut: start"
-          osascript -e 'tell application "System Events" to key code 15 using {control down, shift down}' 2>&1 || echo "could not send the shortcut"
+          osascript -e 'tell application "System Events" to key code 15 using {command down, shift down}' 2>&1 || echo "could not send the shortcut"
           STARTED=""
           for i in $(seq 1 150); do STARTED=$(ls "$T"/mori_rec_*.wav.started 2>/dev/null | head -1 || true); [ -n "$STARTED" ] && break; sleep 0.2; done
           echo "## what the app said"; cat "$R/app.out" "$R/app.err" 2>/dev/null || true
@@ -242,7 +248,7 @@ jobs:
           wait $A
           sleep 2
           echo "## shortcut: stop"
-          osascript -e 'tell application "System Events" to key code 15 using {control down, shift down}' 2>&1 || echo "could not send the shortcut"
+          osascript -e 'tell application "System Events" to key code 15 using {command down, shift down}' 2>&1 || echo "could not send the shortcut"
           # The app deletes the channel files once the call is transcribed: copy
           # the others' channel the moment the recorder says it is done.
           for i in $(seq 1 300); do [ -f "$WAV.done" ] && break; sleep 0.1; done
@@ -257,6 +263,34 @@ jobs:
           grep -q "$APP/Contents/Resources/scripts/record.py" "$R/live_recorder.txt" || { echo "the recorder was not the one inside the app"; exit 1; }
           grep -q "$APP/Contents/MacOS/mori-sysaudio" "$R/live_helper.txt" || { echo "the helper was not the one inside the app"; exit 1; }
           echo "the running app recorded the other side"
+
+          # Cmd+Q in the middle of a call (docs/MACOS.md, M2): Mori stops the
+          # recording, saves the call, then quits. Nothing is left running.
+          echo "## a second recording, ended with Cmd+Q"
+          rm -f "$T"/mori_rec_*.started
+          osascript -e 'tell application "System Events" to key code 15 using {command down, shift down}' 2>&1 || echo "could not send the shortcut"
+          SECOND=""
+          for i in $(seq 1 150); do SECOND=$(ls "$T"/mori_rec_*.wav.started 2>/dev/null | head -1 || true); [ -n "$SECOND" ] && break; sleep 0.2; done
+          [ -n "$SECOND" ] || { echo "the second recording did not start"; exit 1; }
+          WAV2="${SECOND%.started}"
+          sleep 4
+          pgrep -fl "record.py" || true
+          osascript -e 'tell application "System Events" to tell process "mori" to set frontmost to true' 2>&1 || true
+          sleep 1
+          screencapture -x "$R/app_before_quit.png"
+          osascript -e 'tell application "System Events" to keystroke "q" using {command down}' 2>&1 || echo "could not send Cmd+Q"
+          for i in $(seq 1 300); do pgrep -f "Mori.app/Contents/MacOS/mori$" > /dev/null || break; sleep 0.2; done
+          sleep 1
+          screencapture -x "$R/app_after_quit.png"
+          echo "## what is still running (nothing should be)"
+          pgrep -fl "Mori.app/Contents/MacOS/mori$" && { echo "Mori is still running after Cmd+Q"; exit 1; } || true
+          pgrep -fl "record.py" && { echo "the recorder was left running"; exit 1; } || true
+          pgrep -fl "mori-sysaudio" && { echo "the helper was left running"; exit 1; } || true
+          [ -f "$WAV2.done" ] || { echo "the recorder was not stopped cleanly: no $WAV2.done"; ls -la "$T" | grep mori_rec || true; exit 1; }
+          echo "## the calls Mori saved"
+          sqlite3 "$HOME/.mori/mori.db" "select title, status from session where title like 'Recording%' or title like 'Registrazione%'" | tee "$R/calls_after_quit.txt"
+          [ "$(wc -l < "$R/calls_after_quit.txt")" -ge 2 ] || { echo "the call recorded before Cmd+Q was not saved"; exit 1; }
+          echo "Cmd+Q during a call: recording stopped and saved, nothing left running"
 
       - name: After the live run
         if: always()

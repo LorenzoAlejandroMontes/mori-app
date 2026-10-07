@@ -8,6 +8,7 @@
 // localStorage (both windows read it) and changing it reloads the window, so
 // labels computed once at import time (sections, presets) follow too.
 import { EN } from "./en";
+import { platformText } from "../ui/platform";
 
 export type Lang = "it" | "en";
 export type LangPref = "auto" | Lang;
@@ -70,7 +71,8 @@ export function locale(): string {
  * `vars`, in both languages, so the Italian key keeps them too.
  */
 export function t(it: string, vars?: Record<string, string | number>): string {
-  const s = _lang === "en" ? (EN[it] ?? it) : it;
+  // Before the placeholders are filled: what the user wrote is never reworded.
+  const s = platformText(_lang === "en" ? (EN[it] ?? it) : it);
   if (!vars) return s;
   return s.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m));
 }
@@ -81,7 +83,7 @@ export function t(it: string, vars?: Record<string, string | number>): string {
  * ambiguous label says its English right where it is used.
  */
 export function tx(it: string, en: string): string {
-  return _lang === "en" ? en : it;
+  return platformText(_lang === "en" ? en : it);
 }
 
 /**

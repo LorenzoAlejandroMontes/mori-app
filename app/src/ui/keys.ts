@@ -1,4 +1,5 @@
 // Keyboard helpers shared by the views.
+import { isMac } from "./platform";
 
 /** True while the user is writing: single-letter shortcuts must stay quiet. */
 export function isTyping(target: EventTarget | null): boolean {
@@ -8,8 +9,8 @@ export function isTyping(target: EventTarget | null): boolean {
   return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable;
 }
 
-/** "Ctrl+Shift+R" → ["Ctrl", "⇧", "R"]: one key per box. */
-export function hotkeyParts(accel: string): string[] {
+/** "Ctrl+Shift+R" → ["Ctrl", "⇧", "R"], and on a Mac "Cmd+Shift+R" → ["⌘", "⇧", "R"]: one key per box. */
+export function hotkeyParts(accel: string, mac = isMac()): string[] {
   return accel
     .split("+")
     .map((k) => k.trim())
@@ -17,10 +18,17 @@ export function hotkeyParts(accel: string): string[] {
     .map((k) => {
       const l = k.toLowerCase();
       if (l === "shift") return "⇧";
-      if (l === "commandorcontrol" || l === "cmdorctrl" || l === "control") return "Ctrl";
-      if (l === "alt" || l === "option") return "Alt";
+      if (l === "commandorcontrol" || l === "cmdorctrl") return mac ? "⌘" : "Ctrl";
+      if (l === "control" || l === "ctrl") return mac ? "⌃" : "Ctrl";
+      if (l === "cmd" || l === "command" || l === "super" || l === "meta") return mac ? "⌘" : "Win";
+      if (l === "alt" || l === "option") return mac ? "⌥" : "Alt";
       return k.length === 1 ? k.toUpperCase() : k;
     });
+}
+
+/** The shortcut inside a sentence: as typed on Windows ("Ctrl+Shift+R"), as a Mac writes it there ("⌘⇧R"). */
+export function hotkeyLabel(accel: string, mac = isMac()): string {
+  return mac ? hotkeyParts(accel, true).join("") : accel;
 }
 
 /** Move focus among a list's items with the arrows (and J/K), Home/End. */

@@ -214,6 +214,9 @@ export default {
   "Ferma adesso": "Stop now",
   "Ferma": "Stop",
   "Apri Mori": "Open Mori",
+  "Esci": "Quit",
+  "Esci · fermo la registrazione": "Quit · I'll stop the recording first",
+  "Mori · sto registrando": "Mori · recording",
 
   // Recording control and recorder
   "Avvio la registrazione…": "Starting the recording…",

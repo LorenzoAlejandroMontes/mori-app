@@ -7,6 +7,7 @@ import type { SessionJob } from "../jobs";
 import { Wordmark } from "../ui/Mark";
 import { fmtClock, fmtDate } from "../ui/format";
 import { hotkeyParts } from "../ui/keys";
+import { combo } from "../ui/platform";
 import {
   IconAlert,
   IconCalls,
@@ -203,7 +204,7 @@ export function Sidebar({
               data-nav={s.id}
               aria-current={current ? "page" : undefined}
               onClick={() => onSection(s.id)}
-              title={`${s.label} (Ctrl ${i + 1})`}
+              title={`${s.label} (${combo(String(i + 1))})`}
             >
               <Icon />
               <span className="nav-label">{s.label}</span>
@@ -326,7 +327,7 @@ export function MiniRail({
             aria-current={view === s.id ? "page" : undefined}
             onClick={() => onSection(s.id)}
             aria-label={s.label}
-            title={`${s.label} (Ctrl ${i + 1})${s.id === "todos" && mineCount > 0 ? ` · ${t("{n} tue", { n: mineCount })}` : ""}`}
+            title={`${s.label} (${combo(String(i + 1))})${s.id === "todos" && mineCount > 0 ? ` · ${t("{n} tue", { n: mineCount })}` : ""}`}
           >
             <Icon size={18} />
             {s.id === "todos" && mineCount > 0 && <span className="mini-badge" aria-hidden="true" />}

@@ -7,10 +7,11 @@ import type { Session } from "../db";
 import type { SessionJob } from "../jobs";
 import Dragon from "../ui/Mark";
 import { loadHome, type HomeData } from "./home";
-import { isTyping } from "../ui/keys";
+import { hotkeyLabel, isTyping } from "../ui/keys";
 import { dueLabel } from "../ui/format";
 import { countLate, greeting, longDate, myFocus, statsLine, suggestQuestions, waitingOn } from "./home-logic";
 import { bucketOf } from "./todo-logic";
+import { isAutoTitle } from "../recording-logic";
 import { setTodoStatus, type Todo } from "./todos";
 import { DEFAULT_MY_NAMES } from "./todo-logic";
 import { t, tn } from "../i18n";
@@ -112,7 +113,7 @@ export default function HomeView({
     projects: (data?.projects ?? []).map((p) => p.name),
     // The latest call worth summarising: understood, with a real title.
     lastCallTitle:
-      sessions.find((s) => s.status === "done" && !/^(Registrazione|Call senza titolo)/.test(s.title))?.title ?? null,
+      sessions.find((s) => s.status === "done" && !isAutoTitle(s.title))?.title ?? null,
   });
 
   const firstRun = !!data && (data.realCalls === 0 || !providerOk);
@@ -215,7 +216,7 @@ export default function HomeView({
                     <strong>{t("La prima call")}</strong>
                     <span>
                       {firstCallBefore}
-                      <kbd>{hotkey}</kbd>
+                      <kbd>{hotkeyLabel(hotkey)}</kbd>
                       {firstCallAfter}
                     </span>
                   </div>

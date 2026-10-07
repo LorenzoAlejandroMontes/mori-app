@@ -746,6 +746,7 @@ pub fn run() {
                 let _ = RESOURCE_DIR.set(dir);
             }
             companion::setup(app.handle());
+            companion::setup_app_menu(app.handle());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -771,6 +772,7 @@ pub fn run() {
             companion::companion_pill_hide,
             companion::companion_pill_action,
             companion::companion_set_recording,
+            companion::companion_set_labels,
             companion::companion_recording_settled,
             companion::companion_set_hotkey,
             companion::companion_set_close_to_tray,
@@ -780,8 +782,22 @@ pub fn run() {
             companion::recording_silence_secs,
             companion::recording_levels
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running Mori");
+        .build(tauri::generate_context!())
+        .expect("error while running Mori")
+        .run(|app, event| match event {
+            // `code` is None when the system asks (Cmd+Q, the Dock's Quit, the
+            // last window closing) and Some when Mori itself calls `exit`.
+            // During a call the first kind waits for the recording to be saved.
+            tauri::RunEvent::ExitRequested { code: None, api, .. } => {
+                if companion::hold_exit(app) {
+                    api.prevent_exit();
+                }
+            }
+            // A click on the Dock icon brings back the window that "close" hid.
+            #[cfg(target_os = "macos")]
+            tauri::RunEvent::Reopen { .. } => companion::show_main(app),
+            _ => {}
+        });
 }
 
 #[cfg(test)]

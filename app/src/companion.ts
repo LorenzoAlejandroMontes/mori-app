@@ -10,9 +10,10 @@ import { db } from "./db";
 import { DEFAULT_MY_NAMES, parseMyNames } from "./views/todo-logic";
 import { t } from "./i18n";
 import { issueText, type ChannelIssue } from "./recording-logic";
+import { defaultHotkey } from "./ui/platform";
 import { progressLine, understandFraction, understandLine, type Progress, type UnderstandState } from "./progress-logic";
 
-export const DEFAULT_HOTKEY = "Ctrl+Shift+R";
+export const DEFAULT_HOTKEY = defaultHotkey();
 export const DEFAULT_SILENCE_MIN = 8;
 export const COUNTDOWN_SECS = 60;
 
@@ -86,6 +87,21 @@ async function applyToBackend(s: CompanionSettings): Promise<string | null> {
     // Combinazione non valida o già presa: il backend rimette quella di prima,
     // ma va detto, altrimenti si preme un tasto che non fa niente.
     warn = String(e).replace(/^Error:\s*/, "");
+  }
+  try {
+    // Il menu dell'icona nella lingua dell'interfaccia (il backend parte in italiano).
+    await invoke("companion_set_labels", {
+      labels: {
+        record: t("Registra la call"),
+        stop: t("Ferma e trascrivi"),
+        open: t("Apri Mori"),
+        quit: t("Esci"),
+        quit_recording: t("Esci · fermo la registrazione"),
+        tip_recording: t("Mori · sto registrando"),
+      },
+    });
+  } catch {
+    /* backend più vecchio: il menu resta in italiano */
   }
   try {
     await invoke("companion_set_close_to_tray", { on: s.closeToTray });

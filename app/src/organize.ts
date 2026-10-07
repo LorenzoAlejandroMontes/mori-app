@@ -4,6 +4,7 @@ import { chatComplete, isLocalProvider, providerFor, RateLimited, tokensPerMinut
 import { indexSession, hasChunks } from "./index";
 import { fixName, listTerms } from "./vocab";
 import { parseSpeakerMap, relabelText } from "./speakers-logic";
+import { isAutoTitle } from "./recording-logic";
 import { cleanAssignee } from "./views/todo-logic";
 
 // Mori "understands" a call: from its transcript it derives a summary,
@@ -501,7 +502,7 @@ Trascritto: ${transcript}`;
 
   // 0) Title — replace ONLY a generic auto title, never one the user chose (Rule Zero-D).
   const currentTitle = meta?.title ?? "";
-  const isGeneric = currentTitle.startsWith("Registrazione") || currentTitle.startsWith("Call senza titolo");
+  const isGeneric = isAutoTitle(currentTitle);
   if (ext.title?.trim() && isGeneric) {
     await d.execute(`UPDATE session SET title = $1, updated_at = $2 WHERE id = $3`, [
       ext.title.trim(),
