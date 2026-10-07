@@ -49,7 +49,7 @@ def transcribe(model: WhisperModel, path: str, language, prompt: str):
                 vad_filter=True,
             )
         except Exception as e:  # pragma: no cover - depends on the installed version
-            print(f"batched non disponibile, vado in sequenza: {e}", file=sys.stderr)
+            print(f"batched not available, going sequential: {e}", file=sys.stderr)
     return model.transcribe(
         path,
         language=language,

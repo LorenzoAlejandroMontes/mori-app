@@ -487,6 +487,7 @@ async function main() {
   await fallbackChecks({ mods, d, makeSession });
   liveChannelChecks({ mods });
   platformChecks({ mods });
+  englishChecks({ mods });
 
   // =========================================================================
   // Optional: run the real recall against a COPY of a real database, to prove the
@@ -1307,6 +1308,49 @@ function platformChecks({ mods }) {
   check("il titolo in italiano resta quello di prima", /^Registrazione 07 ott,? 14:22$/.test(rl.autoTitle(new Date(2026, 9, 7, 14, 22))), rl.autoTitle(new Date(2026, 9, 7, 14, 22)));
   check("un titolo dato da Mori si riconosce, in tutte e due le lingue", rl.isAutoTitle("Registrazione 07 ott 14:22") && rl.isAutoTitle("Recording 07 Oct 14:22") && rl.isAutoTitle("Call senza titolo"));
   check("un titolo scelto dall'utente no", !rl.isAutoTitle("Kickoff Mori"));
+}
+
+// A new install speaks English, everywhere a person can read: the interface,
+// the sample calls, and what the backend and the Python sidecars say when
+// something goes wrong. Italian words coming back fail here, not in a screenshot.
+function englishChecks({ mods }) {
+  const i18n = mods["i18n/index"];
+  // -----------------------------------------------------------------------
+  section("29 · una installazione nuova parla inglese, ovunque");
+  eq("senza una scelta salvata la lingua è l'inglese", i18n.getLangPref(), "en");
+
+  const ITALIAN =
+    /\b(non|della|delle|degli|dello|nella|nelle|sono|siamo|questa|questo|registrazione|registra|trascrizione|trascrivo|trascritto|impostazioni|riprova|salva|annulla|elimina|oggi|ieri|domani|perch[eé]|gi[aà]|pi[uù]|pu[oò]|senza|cosa|chiamata|errore|fallit[ao]|riuscit[ao]|avviat[ao]|cartella|sintesi|priorit[aà]|settimanale|draghetto|buongiorno|buonasera)\b/i;
+  const hits = (texts) => texts.filter((x) => ITALIAN.test(x));
+
+  const en = Object.entries(mods["i18n/en"].EN).filter(([, v]) => v !== "Italiano");
+  eq("il dizionario inglese non ha parole italiane", hits(en.map(([, v]) => v)).join(" | "), "");
+
+  // The sample calls a new install opens on.
+  const migDir = path.join(appRoot, "src-tauri", "migrations");
+  const seeds = ["0002_seed.sql", "0003_seed_raw.sql"].map((f) => fs.readFileSync(path.join(migDir, f), "utf8"));
+  const seedStrings = seeds.flatMap((s) => [...s.matchAll(/'((?:[^']|'')*)'/g)].map((m) => m[1]));
+  eq("le call di esempio sono in inglese", hits(seedStrings).join(" | "), "");
+  check("e non ci sono più Luca, Marco e Giulia", !/\b(Luca|Marco|Giulia|Elena|Studio Nord)\b/.test(seeds.join("\n")));
+
+  // What Rust and Python say to the app: string literals outside comments.
+  const literals = (file, comment) =>
+    fs
+      .readFileSync(file, "utf8")
+      .split(/\r?\n/)
+      .filter((l) => !comment.test(l))
+      .flatMap((l) => [...l.matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((m) => m[1]));
+  const rustDir = path.join(appRoot, "src-tauri", "src");
+  const rust = fs.readdirSync(rustDir).filter((f) => f.endsWith(".rs")).flatMap((f) => literals(path.join(rustDir, f), /^\s*\/\//));
+  eq("il backend parla inglese", hits(rust).join(" | "), "");
+  const pyDir = path.join(appRoot, "scripts");
+  const py = fs
+    .readdirSync(pyDir)
+    .filter((f) => f.endsWith(".py"))
+    .flatMap((f) => literals(path.join(pyDir, f), /^\s*(#|"""|[A-Za-z].*\.$)/))
+    // "Tu" / "Interlocutore" are stored labels, translated when shown.
+    .filter((x) => x !== "Tu" && x !== "Interlocutore");
+  eq("gli script Python parlano inglese", hits(py).join(" | "), "");
 }
 
 main().catch((e) => {

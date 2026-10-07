@@ -4,6 +4,9 @@
 // falls back to the Italian, and scripts/checks.mjs fails on it — so a new
 // string cannot ship untranslated without anyone noticing.
 //
+// English is what a new install speaks. Italian is one click away in Settings
+// ("Italiano", or "Come il sistema" on an Italian computer) and stays chosen.
+//
 // The language is a per-device display preference, like the theme: it lives in
 // localStorage (both windows read it) and changing it reloads the window, so
 // labels computed once at import time (sections, presets) follow too.
@@ -26,9 +29,9 @@ function systemLang(): Lang {
 export function getLangPref(): LangPref {
   try {
     const v = localStorage.getItem(KEY);
-    return v === "it" || v === "en" ? v : "auto";
+    return v === "it" || v === "en" || v === "auto" ? v : "en";
   } catch {
-    return "auto";
+    return "en";
   }
 }
 
@@ -53,8 +56,7 @@ export function useLangNow(l: Lang): void {
 
 export function setLangPref(p: LangPref): void {
   try {
-    if (p === "auto") localStorage.removeItem(KEY);
-    else localStorage.setItem(KEY, p);
+    localStorage.setItem(KEY, p);
   } catch {
     /* storage refused: the choice applies to this session only */
   }

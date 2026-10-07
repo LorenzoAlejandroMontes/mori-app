@@ -82,7 +82,7 @@ def open_recorder(dev):
             return rec
         except Exception as e:  # driver refused this buffer size
             last = e
-    raise last if last else RuntimeError("nessun buffer accettato")
+    raise last if last else RuntimeError("no buffer size was accepted")
 
 
 def rec_loop(get_device, q, stop, label, errs, last_signal, last_rms=None):

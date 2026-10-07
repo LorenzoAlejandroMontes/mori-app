@@ -32,7 +32,7 @@ fn compress_audio_impl(wav: String) -> Result<String, String> {
         if dest.exists() && dest.metadata().map(|m| m.len()).unwrap_or(0) > 0 {
             return Ok(dest.to_string_lossy().into_owned());
         }
-        return Err(format!("audio non trovato: {wav}"));
+        return Err(format!("audio not found: {wav}"));
     }
 
     let mut cmd = crate::py_command("toflac.py");
@@ -41,11 +41,11 @@ fn compress_audio_impl(wav: String) -> Result<String, String> {
     cmd.idle_no_window();
     let out = cmd
         .output()
-        .map_err(|e| format!("compressione non avviata: {e}"))?;
+        .map_err(|e| format!("The compression did not start: {e}"))?;
     let stdout = String::from_utf8_lossy(&out.stdout).trim().to_string();
     if !out.status.success() {
         return Err(format!(
-            "compressione fallita (l'audio resta com'è): {}",
+            "The compression failed (the audio stays as it is): {}",
             String::from_utf8_lossy(&out.stderr).trim()
         ));
     }
@@ -53,19 +53,19 @@ fn compress_audio_impl(wav: String) -> Result<String, String> {
     // toflac.py already decoded the FLAC back and compared the sample count; we
     // only trust it when it says so explicitly.
     let v: serde_json::Value =
-        serde_json::from_str(&stdout).map_err(|e| format!("risposta non leggibile: {e}"))?;
+        serde_json::from_str(&stdout).map_err(|e| format!("unreadable answer: {e}"))?;
     if v.get("ok").and_then(|x| x.as_bool()) != Some(true) {
         return Err(format!(
-            "verifica fallita: {}",
-            v.get("error").and_then(|x| x.as_str()).unwrap_or("motivo sconosciuto")
+            "check failed: {}",
+            v.get("error").and_then(|x| x.as_str()).unwrap_or("unknown reason")
         ));
     }
     if !dest.exists() || dest.metadata().map(|m| m.len()).unwrap_or(0) == 0 {
-        return Err("il file compresso non è stato scritto".into());
+        return Err("The compressed file was not written".into());
     }
 
     // Only now is the original removed.
-    fs::remove_file(&src).map_err(|e| format!("non riesco a rimuovere il WAV originale: {e}"))?;
+    fs::remove_file(&src).map_err(|e| format!("Could not remove the original WAV: {e}"))?;
     Ok(dest.to_string_lossy().into_owned())
 }
 
@@ -100,11 +100,11 @@ fn copy_into_impl(src: String, dir: String) -> Result<String, String> {
     let from = PathBuf::from(&src);
     let name = from
         .file_name()
-        .ok_or_else(|| "percorso di origine non valido".to_string())?;
+        .ok_or_else(|| "The source path is not valid".to_string())?;
     let to_dir = PathBuf::from(&dir);
-    fs::create_dir_all(&to_dir).map_err(|e| format!("cartella non utilizzabile: {e}"))?;
+    fs::create_dir_all(&to_dir).map_err(|e| format!("That folder cannot be used: {e}"))?;
     let to = to_dir.join(name);
-    fs::copy(&from, &to).map_err(|e| format!("copia non riuscita: {e}"))?;
+    fs::copy(&from, &to).map_err(|e| format!("The copy failed: {e}"))?;
     Ok(to.to_string_lossy().into_owned())
 }
 
@@ -140,29 +140,29 @@ fn deletable(path: &Path) -> bool {
 fn move_audio_impl(src: String, dir: String) -> Result<String, String> {
     let from = PathBuf::from(&src);
     if !from.is_file() {
-        return Err(format!("audio non trovato: {src}"));
+        return Err(format!("audio not found: {src}"));
     }
     if !deletable(&from) {
-        return Err(format!("sposto solo l'audio di Mori: {src}"));
+        return Err(format!("Only Mori's own audio can be moved: {src}"));
     }
     let name = from
         .file_name()
-        .ok_or_else(|| "percorso di origine non valido".to_string())?;
+        .ok_or_else(|| "The source path is not valid".to_string())?;
     let to_dir = PathBuf::from(dir.trim());
     if to_dir.as_os_str().is_empty() || !to_dir.is_absolute() {
-        return Err("indica una cartella completa (es. C:\\Users\\…\\OneDrive\\Mori)".into());
+        return Err("Enter a full folder path (for example C:\\Users\\…\\OneDrive\\Mori)".into());
     }
-    fs::create_dir_all(&to_dir).map_err(|e| format!("cartella non utilizzabile: {e}"))?;
+    fs::create_dir_all(&to_dir).map_err(|e| format!("That folder cannot be used: {e}"))?;
     let to = to_dir.join(name);
     let part = to.with_extension("part");
-    fs::copy(&from, &part).map_err(|e| format!("copia non riuscita: {e}"))?;
+    fs::copy(&from, &part).map_err(|e| format!("The copy failed: {e}"))?;
     let want = fs::metadata(&from).map(|m| m.len()).unwrap_or(0);
     let got = fs::metadata(&part).map(|m| m.len()).unwrap_or(u64::MAX);
     if want == 0 || want != got {
         let _ = fs::remove_file(&part);
-        return Err("la copia non è completa: l'audio resta dov'era".into());
+        return Err("The copy is not complete: the audio stays where it was".into());
     }
-    fs::rename(&part, &to).map_err(|e| format!("copia non riuscita: {e}"))?;
+    fs::rename(&part, &to).map_err(|e| format!("The copy failed: {e}"))?;
     let _ = fs::remove_file(&from);
     Ok(to.to_string_lossy().into_owned())
 }
@@ -173,7 +173,7 @@ fn delete_file_impl(path: String) -> Result<(), String> {
         return Ok(()); // already gone: nothing to do, nothing to refuse
     }
     if !deletable(&p) {
-        return Err(format!("non cancello file fuori dalla cartella di Mori: {path}"));
+        return Err(format!("Files outside Mori's folder are never deleted: {path}"));
     }
     match fs::remove_file(&p) {
         Ok(()) => Ok(()),
@@ -208,7 +208,7 @@ fn safe_name(raw: &str, fallback: &str) -> String {
 /// that folder. Nothing outside `~/.mori` can be written: names are flattened.
 fn export_markdown_impl(folder: String, files: Vec<ExportFile>) -> Result<String, String> {
     let dir = mori_dir().join("export").join(safe_name(&folder, "export"));
-    fs::create_dir_all(&dir).map_err(|e| format!("cartella di export non creata: {e}"))?;
+    fs::create_dir_all(&dir).map_err(|e| format!("The export folder could not be created: {e}"))?;
     for f in files {
         let mut name = safe_name(&f.name, "call.md");
         if !name.to_lowercase().ends_with(".md") {
@@ -223,10 +223,10 @@ fn export_markdown_impl(folder: String, files: Vec<ExportFile>) -> Result<String
 fn reveal_path_impl(path: String) -> Result<(), String> {
     let p = PathBuf::from(&path)
         .canonicalize()
-        .map_err(|e| format!("percorso non trovato: {e}"))?;
+        .map_err(|e| format!("path not found: {e}"))?;
     let root = mori_dir().canonicalize().map_err(|e| e.to_string())?;
     if !p.starts_with(&root) {
-        return Err("apro solo le cartelle di Mori".into());
+        return Err("Only Mori's folders can be opened".into());
     }
     let program = if cfg!(windows) {
         "explorer"
@@ -240,7 +240,7 @@ fn reveal_path_impl(path: String) -> Result<(), String> {
     let mut child = std::process::Command::new(program)
         .arg(crate::platform::plain_path(&p))
         .spawn()
-        .map_err(|e| format!("non riesco ad aprire la cartella: {e}"))?;
+        .map_err(|e| format!("Could not open the folder: {e}"))?;
     // Reap it, so no zombie is left behind until Mori quits (Linux).
     std::thread::spawn(move || {
         let _ = child.wait();
@@ -285,7 +285,7 @@ fn audio_stats_impl() -> AudioStats {
 pub async fn move_audio(src: String, dir: String) -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(move || move_audio_impl(src, dir))
         .await
-        .map_err(|e| format!("task fallita: {e}"))?
+        .map_err(|e| format!("task failed: {e}"))?
 }
 
 /// Let the player read recordings kept in the user's folder: the asset
@@ -306,56 +306,56 @@ pub async fn allow_audio_dir(app: tauri::AppHandle, dir: String) -> Result<(), S
 pub async fn compress_audio(wav: String) -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(move || compress_audio_impl(wav))
         .await
-        .map_err(|e| format!("task fallita: {e}"))?
+        .map_err(|e| format!("task failed: {e}"))?
 }
 
 #[tauri::command]
 pub async fn backups_dir() -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(|| Ok(backups_path().to_string_lossy().into_owned()))
         .await
-        .map_err(|e| format!("task fallita: {e}"))?
+        .map_err(|e| format!("task failed: {e}"))?
 }
 
 #[tauri::command]
 pub async fn rotate_backups(keep: usize) -> Result<Vec<String>, String> {
     tauri::async_runtime::spawn_blocking(move || rotate_backups_impl(keep))
         .await
-        .map_err(|e| format!("task fallita: {e}"))?
+        .map_err(|e| format!("task failed: {e}"))?
 }
 
 #[tauri::command]
 pub async fn copy_into(src: String, dir: String) -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(move || copy_into_impl(src, dir))
         .await
-        .map_err(|e| format!("task fallita: {e}"))?
+        .map_err(|e| format!("task failed: {e}"))?
 }
 
 #[tauri::command]
 pub async fn delete_file(path: String) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || delete_file_impl(path))
         .await
-        .map_err(|e| format!("task fallita: {e}"))?
+        .map_err(|e| format!("task failed: {e}"))?
 }
 
 #[tauri::command]
 pub async fn export_markdown(folder: String, files: Vec<ExportFile>) -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(move || export_markdown_impl(folder, files))
         .await
-        .map_err(|e| format!("task fallita: {e}"))?
+        .map_err(|e| format!("task failed: {e}"))?
 }
 
 #[tauri::command]
 pub async fn reveal_path(path: String) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || reveal_path_impl(path))
         .await
-        .map_err(|e| format!("task fallita: {e}"))?
+        .map_err(|e| format!("task failed: {e}"))?
 }
 
 #[tauri::command]
 pub async fn audio_stats() -> Result<AudioStats, String> {
     tauri::async_runtime::spawn_blocking(audio_stats_impl)
         .await
-        .map_err(|e| format!("task fallita: {e}"))
+        .map_err(|e| format!("task failed: {e}"))
 }
 
 #[cfg(test)]

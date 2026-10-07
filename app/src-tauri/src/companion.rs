@@ -58,9 +58,8 @@ pub const EV_QUIT_REQUEST: &str = "companion://quit-request";
 pub const EV_PILL: &str = "companion://pill";
 pub const EV_PILL_ACTION: &str = "companion://pill-action";
 
-/// The words of the tray menu. They start in Italian, like every key of the
-/// dictionary; the frontend sends them in the user's language as soon as it
-/// is up (`companion_set_labels`).
+/// The words of the tray menu. They start in English; the frontend sends them
+/// in the user's language as soon as it is up (`companion_set_labels`).
 #[derive(serde::Deserialize, Clone, Debug)]
 pub struct Labels {
     record: String,
@@ -74,12 +73,12 @@ pub struct Labels {
 impl Default for Labels {
     fn default() -> Self {
         Labels {
-            record: "Registra la call".into(),
-            stop: "Ferma e trascrivi".into(),
-            open: "Apri Mori".into(),
-            quit: "Esci".into(),
-            quit_recording: "Esci · fermo la registrazione".into(),
-            tip_recording: "Mori · sto registrando".into(),
+            record: "Record the call".into(),
+            stop: "Stop and transcribe".into(),
+            open: "Open Mori".into(),
+            quit: "Quit".into(),
+            quit_recording: "Quit · I'll stop the recording first".into(),
+            tip_recording: "Mori · recording".into(),
         }
     }
 }
@@ -179,38 +178,38 @@ pub fn setup(app: &AppHandle) {
         *state.icons.lock().unwrap() = Some(pair);
     }
 
-    let toggle = match MenuItem::with_id(app, "toggle", "Registra la call", true, Some(DEFAULT_HOTKEY)) {
+    let toggle = match MenuItem::with_id(app, "toggle", "Record the call", true, Some(DEFAULT_HOTKEY)) {
         Ok(i) => i,
         Err(e) => {
-            eprintln!("companion: menu non creato: {e}");
+            eprintln!("companion: tray menu not created: {e}");
             return;
         }
     };
-    let open = match MenuItem::with_id(app, "open", "Apri Mori", true, None::<&str>) {
+    let open = match MenuItem::with_id(app, "open", "Open Mori", true, None::<&str>) {
         Ok(i) => i,
         Err(e) => {
-            eprintln!("companion: menu non creato: {e}");
+            eprintln!("companion: tray menu not created: {e}");
             return;
         }
     };
-    let quit = match MenuItem::with_id(app, "quit", "Esci", true, None::<&str>) {
+    let quit = match MenuItem::with_id(app, "quit", "Quit", true, None::<&str>) {
         Ok(i) => i,
         Err(e) => {
-            eprintln!("companion: menu non creato: {e}");
+            eprintln!("companion: tray menu not created: {e}");
             return;
         }
     };
     let sep = match PredefinedMenuItem::separator(app) {
         Ok(s) => s,
         Err(e) => {
-            eprintln!("companion: menu non creato: {e}");
+            eprintln!("companion: tray menu not created: {e}");
             return;
         }
     };
     let menu = match Menu::with_items(app, &[&toggle, &open, &sep, &quit]) {
         Ok(m) => m,
         Err(e) => {
-            eprintln!("companion: menu non creato: {e}");
+            eprintln!("companion: tray menu not created: {e}");
             return;
         }
     };
@@ -251,7 +250,7 @@ pub fn setup(app: &AppHandle) {
             state.close_to_tray.store(true, Ordering::SeqCst);
         }
         Err(e) => {
-            eprintln!("companion: icona nella barra non creata: {e}");
+            eprintln!("companion: tray icon not created: {e}");
             return;
         }
     }
@@ -282,7 +281,7 @@ pub fn setup(app: &AppHandle) {
     }
 
     if let Err(e) = apply_hotkey(app, DEFAULT_HOTKEY) {
-        eprintln!("companion: scorciatoia non registrata: {e}");
+        eprintln!("companion: shortcut not registered: {e}");
     }
 }
 
@@ -429,7 +428,7 @@ fn register(app: &AppHandle, shortcut: Shortcut) -> Result<(), String> {
 fn apply_hotkey(app: &AppHandle, accel: &str) -> Result<(), String> {
     let shortcut: Shortcut = accel
         .parse()
-        .map_err(|_| format!("scorciatoia non valida: {accel}"))?;
+        .map_err(|_| format!("That shortcut is not valid: {accel}"))?;
     let state = app.state::<Companion>();
     let previous = *state.hotkey.lock().unwrap();
     if previous == Some(shortcut) {
@@ -449,11 +448,11 @@ fn apply_hotkey(app: &AppHandle, accel: &str) -> Result<(), String> {
             if let Some(old) = previous {
                 if register(app, old).is_ok() {
                     *state.hotkey.lock().unwrap() = Some(old);
-                    return Err(format!("{accel} è già usata da un'altra app: resta quella di prima"));
+                    return Err(format!("{accel} is already used by another app: the previous shortcut stays"));
                 }
             }
             *state.hotkey.lock().unwrap() = None;
-            Err(format!("{accel} non si può registrare: {e}"))
+            Err(format!("{accel} cannot be registered: {e}"))
         }
     }
 }
@@ -714,7 +713,7 @@ pub async fn recording_silence_secs(wav: String) -> Result<u64, String> {
         }
     })
     .await
-    .map_err(|e| format!("task fallita: {e}"))
+    .map_err(|e| format!("task failed: {e}"))
 }
 
 /// How loud each channel is right now, how long each has been quiet, and any
@@ -724,7 +723,7 @@ pub async fn recording_silence_secs(wav: String) -> Result<u64, String> {
 pub async fn recording_levels(wav: String) -> Result<Option<String>, String> {
     tauri::async_runtime::spawn_blocking(move || std::fs::read_to_string(format!("{wav}.levels")).ok())
         .await
-        .map_err(|e| format!("task fallita: {e}"))
+        .map_err(|e| format!("task failed: {e}"))
 }
 
 #[cfg(test)]

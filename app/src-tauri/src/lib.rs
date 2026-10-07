@@ -168,7 +168,7 @@ fn start_recording_impl() -> Result<RecPaths, String> {
         .stdout(out_log)
         .stderr(err_log)
         .spawn()
-        .map_err(|e| format!("impossibile avviare la registrazione: {e}"))?;
+        .map_err(|e| format!("The recording could not start: {e}"))?;
 
     // Wait for the recorder to actually come up (imports OK, threads live).
     // If it never signals, recording did NOT start — surface it NOW, not after the call.
@@ -188,9 +188,9 @@ fn start_recording_impl() -> Result<RecPaths, String> {
         let _ = child.kill();
         let detail = std::fs::read_to_string(&log).unwrap_or_default();
         let detail = detail.trim();
-        let detail = if detail.is_empty() { "nessun output" } else { detail };
+        let detail = if detail.is_empty() { "no output" } else { detail };
         return Err(format!(
-            "La registrazione non è partita (motore audio non avviato). Dettagli: {detail}"
+            "The recording did not start (the audio engine did not come up). Details: {detail}"
         ));
     }
 
@@ -206,7 +206,7 @@ fn start_recording_impl() -> Result<RecPaths, String> {
 /// return its path. Transcription is NOT done here — it runs separately via
 /// transcribe_file so a long call never blocks the app.
 fn stop_recording_impl(wav: String, stop: String) -> Result<String, String> {
-    std::fs::write(&stop, b"").map_err(|e| format!("stop fallito: {e}"))?;
+    std::fs::write(&stop, b"").map_err(|e| format!("Could not stop the recording: {e}"))?;
 
     let done = PathBuf::from(format!("{wav}.done"));
     let error = PathBuf::from(format!("{wav}.error"));
@@ -220,13 +220,13 @@ fn stop_recording_impl(wav: String, stop: String) -> Result<String, String> {
 
     if error.exists() {
         let detail = std::fs::read_to_string(&error).unwrap_or_default();
-        return Err(format!("registrazione interrotta da un errore: {}", detail.trim()));
+        return Err(format!("The recording was cut short by an error: {}", detail.trim()));
     }
     if !done.exists() {
         if PathBuf::from(&wav).exists() {
             return Ok(wav); // WAV exists though the marker is late — proceed, don't lose it.
         }
-        return Err("la registrazione non si è chiusa in tempo".into());
+        return Err("The recording did not close in time".into());
     }
     Ok(wav)
 }
@@ -291,7 +291,7 @@ fn transcribe_file_impl(
     cloud: Option<SttCloud>,
 ) -> Result<String, String> {
     if !PathBuf::from(&wav).exists() {
-        return Err(format!("audio non trovato: {wav}"));
+        return Err(format!("audio not found: {wav}"));
     }
 
     // Skip empty/accidental recordings (< ~1s): don't even load the model, and
@@ -319,7 +319,7 @@ fn transcribe_file_impl(
         .open(&lock)
         .is_err()
     {
-        return Err("questa registrazione è già in trascrizione".into());
+        return Err("This recording is already being transcribed".into());
     }
 
     let model = if model.trim().is_empty() { "medium".to_string() } else { model };
@@ -366,9 +366,9 @@ fn transcribe_file_impl(
             Ok(o) => {
                 let why = String::from_utf8_lossy(&o.stderr);
                 let last = why.trim().lines().last().unwrap_or("").chars().take(300).collect::<String>();
-                cloud_err = Some(if last.is_empty() { "cloud: nessuna risposta".into() } else { last });
+                cloud_err = Some(if last.is_empty() { "cloud: no answer".into() } else { last });
             }
-            Err(e) => cloud_err = Some(format!("cloud: non avviata: {e}")),
+            Err(e) => cloud_err = Some(format!("cloud: did not start: {e}")),
         }
     }
 
@@ -395,11 +395,11 @@ fn transcribe_file_impl(
     let _ = std::fs::remove_file(&lock);
     let _ = std::fs::remove_file(&progress);
     let _ = std::fs::remove_file(format!("{progress}.tmp"));
-    let output = result.map_err(|e| format!("trascrizione non avviata: {e}"))?;
+    let output = result.map_err(|e| format!("The transcription did not start: {e}"))?;
 
     if !output.status.success() {
         return Err(format!(
-            "trascrizione fallita (audio salvato in {wav}): {}",
+            "The transcription failed (the audio is saved in {wav}): {}",
             String::from_utf8_lossy(&output.stderr)
         ));
     }
@@ -464,9 +464,9 @@ impl EmbedServer {
         cmd.idle_no_window();
         // stderr is not read: a full, unread pipe would block the server.
         cmd.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::null());
-        let mut child = cmd.spawn().map_err(|e| format!("embedding non avviato: {e}"))?;
-        let stdin = child.stdin.take().ok_or("stdin non disponibile")?;
-        let stdout = child.stdout.take().ok_or("stdout non disponibile")?;
+        let mut child = cmd.spawn().map_err(|e| format!("embedding did not start: {e}"))?;
+        let stdin = child.stdin.take().ok_or("stdin not available")?;
+        let stdout = child.stdout.take().ok_or("stdout not available")?;
         // A reader thread, so a hung sidecar becomes a timeout instead of a
         // request that never returns.
         let (tx, rx) = std::sync::mpsc::channel();
@@ -493,23 +493,23 @@ impl EmbedServer {
             .write_all(line.as_bytes())
             .and_then(|_| self.stdin.write_all(b"\n"))
             .and_then(|_| self.stdin.flush())
-            .map_err(|e| (false, format!("embedding: scrittura fallita: {e}")))?;
+            .map_err(|e| (false, format!("embedding: write failed: {e}")))?;
         // First answer: the model may be downloading (~120 MB). Then: seconds.
         let wait = std::time::Duration::from_secs(if self.warm { 120 } else { 900 });
         let answer = self
             .lines
             .recv_timeout(wait)
-            .map_err(|e| (false, format!("embedding: nessuna risposta ({e})")))?;
+            .map_err(|e| (false, format!("embedding: no answer ({e})")))?;
         let v: serde_json::Value =
-            serde_json::from_str(&answer).map_err(|e| (false, format!("embedding: risposta illeggibile: {e}")))?;
+            serde_json::from_str(&answer).map_err(|e| (false, format!("embedding: unreadable answer: {e}")))?;
         if v.get("ok").and_then(|x| x.as_bool()) == Some(true) {
             // Only a real answer proves the model is loaded: after an error a
             // later first load (or download) still gets the long wait.
             self.warm = true;
             Ok(v.get("vectors").cloned().unwrap_or_else(|| serde_json::json!([])).to_string())
         } else {
-            let msg = v.get("error").and_then(|x| x.as_str()).unwrap_or("errore sconosciuto");
-            Err((true, format!("embedding fallito: {msg}")))
+            let msg = v.get("error").and_then(|x| x.as_str()).unwrap_or("unknown error");
+            Err((true, format!("embedding failed: {msg}")))
         }
     }
 }
@@ -563,20 +563,20 @@ fn embed_texts_once(texts: Vec<String>, mode: String) -> Result<String, String> 
     cmd.idle_no_window();
     cmd.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
 
-    let mut child = cmd.spawn().map_err(|e| format!("embedding non avviato: {e}"))?;
+    let mut child = cmd.spawn().map_err(|e| format!("embedding did not start: {e}"))?;
     {
-        let mut stdin = child.stdin.take().ok_or("stdin non disponibile")?;
+        let mut stdin = child.stdin.take().ok_or("stdin not available")?;
         stdin
             .write_all(payload.as_bytes())
-            .map_err(|e| format!("scrittura input embedding fallita: {e}"))?;
+            .map_err(|e| format!("embedding: could not write the input: {e}"))?;
         // stdin dropped here → EOF, so the sidecar starts computing.
     }
     let output = child
         .wait_with_output()
-        .map_err(|e| format!("embedding fallito: {e}"))?;
+        .map_err(|e| format!("embedding failed: {e}"))?;
     if !output.status.success() {
         return Err(format!(
-            "embedding fallito: {}",
+            "embedding failed: {}",
             String::from_utf8_lossy(&output.stderr)
         ));
     }
@@ -596,7 +596,7 @@ async fn start_recording(app: tauri::AppHandle) -> Result<RecPaths, String> {
     companion::set_unsaved(&app, true);
     let res = tauri::async_runtime::spawn_blocking(start_recording_impl)
         .await
-        .map_err(|e| format!("task fallita: {e}"))
+        .map_err(|e| format!("task failed: {e}"))
         .and_then(|r| r);
     if res.is_err() {
         companion::set_unsaved(&app, false);
@@ -608,7 +608,7 @@ async fn start_recording(app: tauri::AppHandle) -> Result<RecPaths, String> {
 async fn stop_recording(wav: String, stop: String) -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(move || stop_recording_impl(wav, stop))
         .await
-        .map_err(|e| format!("task fallita: {e}"))?
+        .map_err(|e| format!("task failed: {e}"))?
 }
 
 /// How far the transcription of `wav` has got: the JSON that the Python script
@@ -618,7 +618,7 @@ async fn stop_recording(wav: String, stop: String) -> Result<String, String> {
 async fn transcribe_progress(wav: String) -> Result<Option<String>, String> {
     tauri::async_runtime::spawn_blocking(move || std::fs::read_to_string(format!("{wav}.progress")).ok())
         .await
-        .map_err(|e| format!("task fallita: {e}"))
+        .map_err(|e| format!("task failed: {e}"))
 }
 
 #[tauri::command]
@@ -631,21 +631,21 @@ async fn transcribe_file(
 ) -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(move || transcribe_file_impl(wav, model, vocab, context, cloud))
         .await
-        .map_err(|e| format!("task fallita: {e}"))?
+        .map_err(|e| format!("task failed: {e}"))?
 }
 
 #[tauri::command]
 async fn embed_texts(texts: Vec<String>, mode: String) -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(move || embed_texts_impl(texts, mode))
         .await
-        .map_err(|e| format!("task fallita: {e}"))?
+        .map_err(|e| format!("task failed: {e}"))?
 }
 
 #[tauri::command]
 async fn foreground_window_title() -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(platform::foreground_window_title)
         .await
-        .map_err(|e| format!("task fallita: {e}"))
+        .map_err(|e| format!("task failed: {e}"))
 }
 
 /// Every migration, in order. sqlx stores the SHA-384 of each file's bytes in
@@ -808,10 +808,12 @@ mod tests {
     /// (`select version, hex(checksum) from _sqlx_migrations`).
     /// Never edit a line here: a released migration is frozen, a fix goes in a
     /// new file. A new migration adds its line once its bytes are final.
+    /// (2 and 3, the sample calls, were rewritten in English on 2026-10-07,
+    /// before the first public build: no released database had seen them.)
     const MIGRATION_CHECKSUMS: &[(i64, &str)] = &[
         (1, "ff5f4232de041570122b7823c29078fe03be0851fb482d200027e0c86046978ca85874ca9f897416e165fd203e5134a3"),
-        (2, "18b67236e1ed66e6eda88567b291ad3d9ef21b7807d9baf500388e6c082cc378eaf06c4940e14f2a39106ab738815351"),
-        (3, "334e792863373633621721a03fb857c7002dd4cf6ac4877caecfb2923679fec7385157a4a331619573b95b56d91b63bf"),
+        (2, "92ea8224b0b8fb20a7e12b7764fc0894552e91b10395ab667c0d793204b96824d8ff46af6d82715acf75e5df798cd999"),
+        (3, "611eeebbd2cecf5a6c55da099ff24ee7f03a3b1a7307b001d79d8b409552118f8ddc4e8b73466c46df6f25e84e7571c7"),
         (4, "c461985e308f5956511e85e14c7ced472f67d6b95036b5a9cc8f7c3d9db184bf6b28bc1bd278d76d2e5d75390e9814fd"),
         (5, "fb3b039f9f2b0560b33efeafa2bdce5472e342c53716330945fd9db030516ae056a3cef50289a3e350f98958603fd7d3"),
         (6, "2710477e9d2d6ea768d14a9310cba8a84800402a1b3b4c8a079bda33c89a1eb80715db9cd44bd01241df4871eb6875b6"),
@@ -839,17 +841,17 @@ mod tests {
                 .find(|(v, _)| *v == m.version)
                 .unwrap_or_else(|| {
                     panic!(
-                        "migrazione {} ({}) senza impronta: aggiungi ({}, \"{actual}\") a MIGRATION_CHECKSUMS",
+                        "migration {} ({}) has no fingerprint: add ({}, \"{actual}\") to MIGRATION_CHECKSUMS",
                         m.version, m.description, m.version
                     )
                 });
             assert_eq!(
                 actual, pinned.1,
-                "la migrazione {} ({}) ha cambiato byte: i database che l'hanno gia' applicata non si aprirebbero piu'",
+                "migration {} ({}) changed its bytes: the databases that already applied it would no longer open",
                 m.version, m.description
             );
         }
-        assert_eq!(migrations.len(), MIGRATION_CHECKSUMS.len(), "un'impronta senza la sua migrazione");
+        assert_eq!(migrations.len(), MIGRATION_CHECKSUMS.len(), "a fingerprint without its migration");
     }
 
     /// The warm embedding server, end to end with the real embed.py (in its
@@ -860,7 +862,7 @@ mod tests {
         if Command::new("python3").arg("--version").output().is_err()
             && Command::new("python").arg("--version").output().is_err()
         {
-            eprintln!("python non disponibile: salto");
+            eprintln!("python not available: skipping");
             return;
         }
         std::env::set_var("MORI_EMBED_FAKE", "1");

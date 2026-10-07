@@ -1,0 +1,2 @@
+macos-app-results 1637623 https://api.github.com/repos/LorenzoAlejandroMontes/mori-app/actions/artifacts/11496455066/zip
+Mori-macos-apple-silicon-dmg 7759022 https://api.github.com/repos/LorenzoAlejandroMontes/mori-app/actions/artifacts/11494529985/zip

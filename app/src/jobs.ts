@@ -380,7 +380,7 @@ async function runTranscribe(job: Job): Promise<void> {
       } catch (e) {
         lastErr = e;
         // Only a missing file is worth trying the next candidate for.
-        if (!/non trovato/i.test(String(e))) throw e;
+        if (!/not found|non trovato/i.test(String(e))) throw e;
       }
     }
   } finally {

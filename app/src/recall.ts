@@ -1,6 +1,7 @@
 import { db, privateSessionIds } from "./db";
 import { embed, cosine } from "./embeddings";
 import { chunkSignature } from "./index";
+import { locale, t } from "./i18n";
 
 // A source shown under a chat answer. `start` (seconds) is the best-matching
 // chunk's position in the call, when known — the UI can offer a "▶ mm:ss" chip.
@@ -48,7 +49,7 @@ type TodoRow = {
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "";
-  return new Date(iso).toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" });
+  return new Date(iso).toLocaleDateString(locale(), { day: "2-digit", month: "short", year: "numeric" });
 }
 
 function fmtClock(sec: number | null): string {
@@ -445,7 +446,7 @@ export async function retrieve(query: string, opts: RetrieveOptions = {}): Promi
   const chunkBlocks: string[] = [];
   for (const sid of sessionOrder) {
     const m = metaById.get(sid);
-    const header = `[${m?.title ?? "Senza titolo"} — ${fmtDate(m?.started_at ?? null)}]`;
+    const header = `[${m?.title ?? t("Call senza titolo")} — ${fmtDate(m?.started_at ?? null)}]`;
     const rows = picked
       .filter((i) => c.chunks[i].session_id === sid)
       .map((i) => c.chunks[i])
@@ -505,7 +506,7 @@ export async function retrieve(query: string, opts: RetrieveOptions = {}): Promi
       .filter((i) => c.chunks[i].session_id === sid && c.chunks[i].start_sec != null)
       .map((i) => c.chunks[i].start_sec as number)
       .sort((a, b) => a - b);
-    return { id: sid, title: m?.title ?? "Senza titolo", date: fmtDate(m?.started_at ?? null), start: withTime[0] ?? null };
+    return { id: sid, title: m?.title ?? t("Call senza titolo"), date: fmtDate(m?.started_at ?? null), start: withTime[0] ?? null };
   });
 
   const used = new Set<string>(sessionOrder);

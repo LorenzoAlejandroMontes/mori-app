@@ -89,7 +89,7 @@ async function applyToBackend(s: CompanionSettings): Promise<string | null> {
     warn = String(e).replace(/^Error:\s*/, "");
   }
   try {
-    // Il menu dell'icona nella lingua dell'interfaccia (il backend parte in italiano).
+    // Il menu dell'icona nella lingua dell'interfaccia (il backend parte in inglese).
     await invoke("companion_set_labels", {
       labels: {
         record: t("Registra la call"),
@@ -101,7 +101,7 @@ async function applyToBackend(s: CompanionSettings): Promise<string | null> {
       },
     });
   } catch {
-    /* backend più vecchio: il menu resta in italiano */
+    /* backend più vecchio: il menu resta com'è */
   }
   try {
     await invoke("companion_set_close_to_tray", { on: s.closeToTray });

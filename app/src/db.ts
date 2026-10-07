@@ -2,6 +2,7 @@ import Database from "@tauri-apps/plugin-sql";
 import { invoke } from "@tauri-apps/api/core";
 import { parseSpeakerMap, withSpeakerMap, type SpeakerMap } from "./speakers-logic";
 import { cleanAssignee } from "./views/todo-logic";
+import { t } from "./i18n";
 
 let _db: Database | null = null;
 let _loading: Promise<Database> | null = null;
@@ -167,7 +168,7 @@ export async function listCategoriesWithCounts(): Promise<CategoryCount[]> {
 export async function renameSession(id: string, title: string): Promise<void> {
   const d = await db();
   await d.execute(`UPDATE session SET title = $1, updated_at = $2 WHERE id = $3`, [
-    title.trim() || "Senza titolo",
+    title.trim() || t("Call senza titolo"),
     new Date().toISOString(),
     id,
   ]);

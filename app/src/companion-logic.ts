@@ -39,9 +39,9 @@ export function silenceDecision(input: {
 
 export type BriefSource = { id: string; title: string; date: string };
 
-export function fmtBriefDate(iso: string | null): string {
+export function fmtBriefDate(iso: string | null, loc = "it-IT"): string {
   if (!iso) return "";
-  return new Date(iso).toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" });
+  return new Date(iso).toLocaleDateString(loc, { day: "2-digit", month: "short", year: "numeric" });
 }
 
 /**

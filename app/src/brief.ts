@@ -11,7 +11,7 @@
 // companion-logic.ts, che gira anche fuori dall'app per poter essere verificato.
 
 import { db, privateSessionIds } from "./db";
-import { answerLanguageNote, t } from "./i18n";
+import { answerLanguageNote, locale, t } from "./i18n";
 import { chatComplete, isLocalProvider, providerFor } from "./llm";
 import type { PersonDossier } from "./views/people";
 import {
@@ -123,7 +123,7 @@ export async function getBrief(dossier: PersonDossier, force = false): Promise<B
     if (!lines.length) return { state: "error", message: t("il modello non ha scritto niente") };
     const brief: Brief = {
       lines,
-      sources: material.calls.slice(0, 6).map((c) => ({ id: c.id, title: c.title, date: fmtBriefDate(c.startedAt) })),
+      sources: material.calls.slice(0, 6).map((c) => ({ id: c.id, title: c.title, date: fmtBriefDate(c.startedAt, locale()) })),
       createdAt: new Date().toISOString(),
       latestSessionId: key,
     };

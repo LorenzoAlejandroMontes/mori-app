@@ -66,7 +66,7 @@ def main() -> int:
     # A refusal is reported through `ok: false` on stdout with exit code 0: the
     # caller reads stdout, and a non-zero exit would hide the reason.
     if not os.path.exists(src):
-        print(json.dumps({"ok": False, "error": f"audio non trovato: {src}"}))
+        print(json.dumps({"ok": False, "error": f"audio not found: {src}"}))
         return 0
 
     tmp = dst + ".part"
@@ -87,7 +87,7 @@ def main() -> int:
             os.remove(tmp)
         except OSError:
             pass
-        print(json.dumps({"ok": False, "error": f"verifica fallita: {src_frames} -> {dst_frames} campioni"}))
+        print(json.dumps({"ok": False, "error": f"check failed: {src_frames} -> {dst_frames} samples"}))
         return 0
 
     os.replace(tmp, dst)

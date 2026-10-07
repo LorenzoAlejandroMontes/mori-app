@@ -158,7 +158,7 @@ def post(url: str, key: str, model: str, prompt: str, language, data: bytes) -> 
                 # Whisper is the faster way, so give up and let it run.
                 wait = float(e.headers.get("retry-after") or 20)
                 if wait > 120:
-                    raise CloudError(f"limite gratuito raggiunto ({text})")
+                    raise CloudError(f"free limit reached ({text})")
                 time.sleep(wait + 0.5)
                 continue
             if e.code >= 500 and attempt < 2:
@@ -169,8 +169,8 @@ def post(url: str, key: str, model: str, prompt: str, language, data: bytes) -> 
             if attempt < 2:
                 time.sleep(3)
                 continue
-            raise CloudError(f"rete: {e}")
-    raise CloudError("nessuna risposta")
+            raise CloudError(f"network: {e}")
+    raise CloudError("no answer")
 
 
 def transcribe_channel(path, speaker, ctx, progress, done_before):
@@ -208,7 +208,7 @@ def main() -> int:
         "language": os.environ.get("MORI_STT_LANGUAGE", "").strip() or None,
     }
     if not ctx["url"] or not ctx["key"] or not args:
-        print("cloud: manca endpoint, chiave o audio", file=sys.stderr)
+        print("cloud: endpoint, key or audio missing", file=sys.stderr)
         return 3
     diarized = len(args) >= 2 and args[1].lower().endswith(".wav") and os.path.exists(args[1])
     channels = [(args[0], "Tu"), (args[1], "Interlocutore")] if diarized else [(args[0], "")]

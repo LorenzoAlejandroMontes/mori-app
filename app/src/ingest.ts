@@ -1,4 +1,5 @@
 import { db, type Segment } from "./db";
+import { t as tr } from "./i18n";
 import { indexSession } from "./index";
 import { applyVocab, applyVocabToSegments, fixName, listTerms } from "./vocab";
 
@@ -32,7 +33,7 @@ export async function addCall(input: NewCall): Promise<string> {
     `INSERT INTO session
        (id, title, kind, status, folder_path, language, started_at, ended_at, metadata_json, sensitive, created_at, updated_at)
      VALUES ($1, $2, 'meeting', 'done', $3, 'it', $4, $4, '{}', $5, $4, $4)`,
-    [id, input.title.trim() || "Call senza titolo", input.folder.trim() || "/Inbox", t, input.sensitive ? 1 : 0],
+    [id, input.title.trim() || tr("Call senza titolo"), input.folder.trim() || "/Inbox", t, input.sensitive ? 1 : 0],
   );
 
   await d.execute(
@@ -64,7 +65,7 @@ export async function addRecordingPlaceholder(title: string): Promise<string> {
     `INSERT INTO session
        (id, title, kind, status, folder_path, language, started_at, ended_at, metadata_json, sensitive, created_at, updated_at)
      VALUES ($1, $2, 'meeting', 'transcribing', '/', 'it', $3, $3, '{}', 0, $3, $3)`,
-    [id, title.trim() || "Registrazione", t],
+    [id, title.trim() || tr("Registrazione"), t],
   );
   return id;
 }

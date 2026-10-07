@@ -257,6 +257,13 @@ jobs:
           [ -f "$R/live_others.wav" ] || { echo "the recording did not finish"; ls -la "$T" | grep mori_rec || true; cat "$T"/mori_rec_*.log 2>/dev/null || true; exit 1; }
           sleep 3
           screencapture -x "$R/app_after_stop.png"
+          # Settings (Cmd+,), then back to Today (Cmd+1): one more page to look at.
+          osascript -e 'tell application "System Events" to tell process "mori" to set frontmost to true' 2>&1 || true
+          osascript -e 'tell application "System Events" to keystroke "," using {command down}' 2>&1 || true
+          sleep 2
+          screencapture -x "$R/app_settings.png"
+          osascript -e 'tell application "System Events" to keystroke "1" using {command down}' 2>&1 || true
+          sleep 1
           cat "$T"/mori_rec_*.log 2>/dev/null || true
           echo "## the others' channel, recorded by the running app"
           "$PY" native/mori-sysaudio/ci_check.py "$R/live_others.wav" meeting thursday slides | tee "$R/live_others.json"

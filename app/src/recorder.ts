@@ -184,9 +184,9 @@ export function sttKeyFor(own: string, provider: { baseUrl: string; apiKey: stri
 export function cloudFallbackMessage(err: string): string {
   if (/\b40[13]\b|invalid api key|unauthori/i.test(err))
     return t("La chiave Groq non è valida: ho trascritto sul PC, più lentamente. Controllala in Impostazioni → Trascrizione.");
-  if (/\b429\b|limite gratuito|rate limit/i.test(err))
+  if (/\b429\b|free limit|limite gratuito|rate limit/i.test(err))
     return t("Hai finito l'audio gratuito di Groq per ora: ho trascritto sul PC, più lentamente. Si ricarica da solo.");
-  if (/rete|timed out|timeout|urlopen|connection|name resolution/i.test(err))
+  if (/network|rete|timed out|timeout|urlopen|connection|name resolution/i.test(err))
     return t("Groq non era raggiungibile: ho trascritto sul PC, più lentamente.");
   return t("Groq non ha trascritto questa call: l'ho fatto sul PC, più lentamente.");
 }
