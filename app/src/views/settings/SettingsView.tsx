@@ -556,7 +556,7 @@ export default function SettingsView({
                     hint={
                       sttKeyFor("", d.local)
                         ? t("Uso quella del modello, che è già Groq. Scrivine una qui solo per usarne un'altra.")
-                        : t("Gratis su console.groq.com → API Keys. Resta sul tuo PC.")
+                        : t("Gratis su console.groq.com → API Keys.")
                     }
                     error={!sttKeyFor(d.sttKey, d.local) ? t("Senza una chiave trascrivo sul PC.") : undefined}
                   >

@@ -95,7 +95,7 @@ export default {
   "Chiave Groq": "Groq key",
   "Uso quella del modello, che è già Groq. Scrivine una qui solo per usarne un'altra.":
     "I'm using the model's key, which is already Groq. Enter one here only to use a different one.",
-  "Gratis su console.groq.com → API Keys. Resta sul tuo PC.": "Free at console.groq.com → API Keys. It stays on your PC.",
+  "Gratis su console.groq.com → API Keys.": "Free at console.groq.com → API Keys.",
   "Senza una chiave trascrivo sul PC.": "Without a key, I transcribe on your PC.",
   "Qualità": "Quality",
   "Più grande = più fedele ma più lento.": "Bigger = more accurate but slower.",

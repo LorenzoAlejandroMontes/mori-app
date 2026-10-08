@@ -818,6 +818,7 @@ pub fn run() {
             maintenance::audio_stats,
             maintenance::export_markdown,
             maintenance::reveal_path,
+            maintenance::open_groq_keys,
             companion::companion_pill,
             companion::companion_pill_ready,
             companion::companion_pill_hide,

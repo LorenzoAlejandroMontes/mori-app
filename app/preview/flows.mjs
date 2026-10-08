@@ -227,14 +227,26 @@ await flow("paste a transcript: the call is created and opens", WIDE, async (p) 
 
 await flow("first run: paste the Groq key, Mori checks it and keeps it", WIDE, async (p) => {
   await p.goto(`${base}/?v=app&fresh=1`);
-  await p.waitForSelector(".quick-key");
-  await p.fill('.quick-key input', "gsk_bad_key");
-  await p.click('.quick-key button[type="submit"]');
-  await p.waitForSelector('.quick-key-msg.ko:has-text("Invalid key")');
-  await p.fill('.quick-key input', "gsk_good");
-  await p.click('.quick-key button[type="submit"]');
+  // A new Mori opens on the welcome: the key is asked before anything else.
+  const dlg = '[role="dialog"].welcome-key';
+  await p.waitForSelector(dlg);
+  await p.fill(`${dlg} .quick-key input`, "gsk_bad_key");
+  await p.click(`${dlg} .quick-key button[type="submit"]`);
+  await p.waitForSelector(`${dlg} .quick-key-msg.ko:has-text("Invalid key")`);
+  await p.fill(`${dlg} .quick-key input`, "gsk_good");
+  await p.click(`${dlg} .quick-key button[type="submit"]`);
   await p.waitForSelector('[role="status"]:has-text("connected to Groq")');
   await p.waitForSelector(".quick-key", { state: "detached" });
+});
+
+await flow("first run: skip the key, the field stays on Today and the welcome does not come back", WIDE, async (p) => {
+  await p.goto(`${base}/?v=app&fresh=1`);
+  await p.click('[role="dialog"].welcome-key button:has-text("Skip for now")');
+  await p.waitForSelector('[role="dialog"]', { state: "detached" });
+  await p.waitForSelector(".home-welcome .quick-key");
+  await p.reload();
+  await p.waitForSelector(".home-welcome .quick-key");
+  if (await p.locator('[role="dialog"].welcome-key').count()) throw new Error("the welcome came back after Skip");
 });
 
 await flow("Groq refuses the key: transcribes on the PC and says so", WIDE, async (p) => {
@@ -326,6 +338,7 @@ await flow("keyboard: Ctrl+1…5, Ctrl+\\, ? and Esc", WIDE, async (p) => {
   const name = "first run: Remove them and Undo";
   try {
     await p.goto(`${base}/?v=app&fresh=1`);
+    await p.click('[role="dialog"].welcome-key button:has-text("Skip for now")');
     await p.waitForSelector(".welcome-demo");
     const before = await p.locator(".sidebar .recent-item").count();
     await p.click('.welcome-demo button:has-text("Remove them")');

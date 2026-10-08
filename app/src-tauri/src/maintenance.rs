@@ -351,6 +351,27 @@ pub async fn reveal_path(path: String) -> Result<(), String> {
         .map_err(|e| format!("task failed: {e}"))?
 }
 
+/// Opens the page where Groq keys are made, in the default browser. The
+/// address is fixed here: the interface cannot ask for any other.
+#[tauri::command]
+pub async fn open_groq_keys() -> Result<(), String> {
+    let program = if cfg!(windows) {
+        "explorer"
+    } else if cfg!(target_os = "macos") {
+        "open"
+    } else {
+        "xdg-open"
+    };
+    let mut child = std::process::Command::new(program)
+        .arg("https://console.groq.com/keys")
+        .spawn()
+        .map_err(|e| format!("Could not open the browser: {e}"))?;
+    std::thread::spawn(move || {
+        let _ = child.wait();
+    });
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn audio_stats() -> Result<AudioStats, String> {
     tauri::async_runtime::spawn_blocking(audio_stats_impl)

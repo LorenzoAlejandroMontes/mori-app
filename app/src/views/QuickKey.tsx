@@ -9,7 +9,16 @@ import { GROQ_URL } from "../recorder";
 
 export const GROQ_MODEL = "openai/gpt-oss-120b";
 
-export default function QuickKey({ onSaved, onMore }: { onSaved: (cfg: ProviderConfig) => void; onMore: () => void }) {
+export default function QuickKey({
+  onSaved,
+  onMore,
+  bare,
+}: {
+  onSaved: (cfg: ProviderConfig) => void;
+  onMore: () => void;
+  /** Inside the welcome dialog, where the line above already says where keys come from. */
+  bare?: boolean;
+}) {
   const [key, setKey] = useState("");
   const [state, setState] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
 
@@ -57,7 +66,7 @@ export default function QuickKey({ onSaved, onMore }: { onSaved: (cfg: ProviderC
         </p>
       ) : (
         <p className="quick-key-msg">
-          {t("Gratis su console.groq.com → API Keys. Resta sul tuo PC.")}{" "}
+          {!bare && <>{t("Gratis su console.groq.com → API Keys.")} </>}
           <button type="button" className="link-btn" onClick={onMore}>
             {t("Altri modelli")}
           </button>

@@ -97,6 +97,7 @@ import type { CallTab, Detail, SeekRequest } from "./views/call/types";
 import HistoryView from "./views/HistoryView";
 import SettingsView, { type SettingsSection } from "./views/settings/SettingsView";
 import AddCallModal from "./views/AddCallModal";
+import WelcomeKey from "./views/WelcomeKey";
 import CommandPalette from "./views/CommandPalette";
 import CallDetectBanner from "./views/CallDetectBanner";
 import ReadyToast, { type Ready } from "./views/ReadyToast";
@@ -140,6 +141,18 @@ export default function App() {
   const [jobs, setJobs] = useState<Record<string, SessionJob>>({});
 
   const [addOpen, setAddOpen] = useState(false);
+  // The welcome that asks for a Groq key: once, on a Mori with no model yet.
+  const [welcomeOpen, setWelcomeOpen] = useState(false);
+  const closeWelcome = () => {
+    try { localStorage.setItem("mori.welcomeKey", "seen"); } catch { /* ignore */ }
+    setWelcomeOpen(false);
+  };
+  const connectProvider = (next: ProviderConfig) => {
+    // Same as Settings → Salva: the queue waiting for a key moves now.
+    void saveConfig(next).then(() => pumpJobs());
+    setCfg(next);
+    setNotice(t("Mori è collegato a Groq: capisce le call e le trascrive in pochi secondi."));
+  };
   const [tab, setTab] = useState<CallTab>("sintesi");
   const [cmdOpen, setCmdOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -324,6 +337,9 @@ export default function App() {
     ])
       .then(([c]) => {
         setCfg(c);
+        let seen = false;
+        try { seen = localStorage.getItem("mori.welcomeKey") === "seen"; } catch { /* ignore */ }
+        if (!providerReady(c) && !seen) setWelcomeOpen(true);
         return resumeJobs();
       })
       .catch(() => {});
@@ -701,12 +717,7 @@ export default function App() {
             myNames={companion.myNames}
             jobs={jobs}
             providerOk={providerReady(cfg)}
-            onSaveProvider={(next) => {
-              // Same as Settings → Salva: the queue waiting for a key moves now.
-              void saveConfig(next).then(() => pumpJobs());
-              setCfg(next);
-              setNotice(t("Mori è collegato a Groq: capisce le call e le trascrive in pochi secondi."));
-            }}
+            onSaveProvider={connectProvider}
             hotkey={companion.hotkey}
             refreshKey={refresh + todosBump}
             recording={!!rec.recording}
@@ -831,6 +842,20 @@ export default function App() {
       </main>
 
       {addOpen && <AddCallModal onClose={() => setAddOpen(false)} onAdd={handleAddCall} />}
+
+      {welcomeOpen && (
+        <WelcomeKey
+          onSaved={(next) => {
+            closeWelcome();
+            connectProvider(next);
+          }}
+          onSkip={closeWelcome}
+          onMore={() => {
+            closeWelcome();
+            openSettings("modello");
+          }}
+        />
+      )}
 
       {followUpFor && (
         <FollowUpModal

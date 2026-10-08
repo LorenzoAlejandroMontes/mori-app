@@ -18,4 +18,11 @@ export default {
   "Verifico…": "Checking…",
   "Collega": "Connect",
   "Altri modelli": "Other models",
+  "Una chiave, e le tue call sono pronte in pochi secondi.": "One key, and your calls are ready in seconds.",
+  "Mori usa Groq per trascrivere le call e capirle. Le chiavi Groq sono gratuite e si creano in un minuto.": "Mori uses Groq to transcribe your calls and understand them. Groq keys are free and take a minute to make.",
+  "Crea una chiave": "Create a key",
+  "Apri console.groq.com/keys": "Open console.groq.com/keys",
+  "Incollala qui": "Paste it here",
+  "Senza chiave Mori trascrive su questo computer e ci mette molto di più.": "Without a key Mori transcribes on this computer, which takes much longer.",
+  "Salta per ora": "Skip for now",
 } as Record<string, string>;
