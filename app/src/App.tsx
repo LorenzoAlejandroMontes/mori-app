@@ -47,7 +47,8 @@ import { copyText } from "./ui/format";
 import { recategorizeAllSessions } from "./organize";
 import { indexAllMissing, indexSession } from "./index";
 import { addCall } from "./ingest";
-import { callMarkdown } from "./followup";
+import { callMarkdown, revealInFolder, saveTranscriptFile } from "./followup";
+import { exportFileName, transcriptToMarkdown, transcriptToText, transcriptTurns } from "./export-logic";
 import { maybeBackup } from "./backup";
 import {
   enqueueJob,
@@ -617,6 +618,46 @@ export default function App() {
     }
   }
 
+  // The transcript of the open call, whole: as plain text to paste, as a .md
+  // file, or as Markdown for an assistant to read.
+  function transcriptOf(d: Detail) {
+    const nameOf = (label: string) => d.speakers[label] ?? (label === "Tu" ? myName ?? speakerLabel(label) : speakerLabel(label));
+    const turns = transcriptTurns(d.segments, d.transcript, nameOf);
+    const call = { title: d.session.title, startedAt: d.session.started_at };
+    const duration = d.segments.reduce((m, x) => Math.max(m, x.end), 0);
+    return { turns, call, markdown: () => transcriptToMarkdown(call, turns, duration) };
+  }
+
+  async function copyTranscript(d: Detail) {
+    try {
+      await copyText(transcriptToText(transcriptOf(d).turns));
+      setNotice(t("Trascritto copiato negli appunti, per intero."));
+    } catch (e) {
+      setToast(t("Copia non riuscita: {error}", { error: String(e) }));
+    }
+  }
+
+  async function saveTranscript(d: Detail) {
+    try {
+      const tr = transcriptOf(d);
+      const name = exportFileName(tr.call);
+      const dir = await saveTranscriptFile(name, tr.markdown());
+      setNotice(t("Salvato come “{name}”: ti apro la cartella.", { name }));
+      await revealInFolder(dir);
+    } catch (e) {
+      setToast(t("Non sono riuscito a salvare il file: {error}", { error: String(e) }));
+    }
+  }
+
+  async function copyTranscriptForAi(d: Detail) {
+    try {
+      await copyText(transcriptOf(d).markdown());
+      setNotice(t("Trascritto copiato in Markdown: incollalo nella chat della tua IA."));
+    } catch (e) {
+      setToast(t("Copia non riuscita: {error}", { error: String(e) }));
+    }
+  }
+
   // Understanding a call goes through the queue like everything else: the error
   // is saved on the job (not lost in React state) and "Riprova" can pick it up.
   async function organize(id: string) {
@@ -822,6 +863,9 @@ export default function App() {
             onDelete={() => deleteCall(detail.session.id, detail.session.title)}
             onTogglePrivate={(on) => void togglePrivate(detail.session.id, on)}
             onCopyMarkdown={() => void copyCallMarkdown(detail.session.id)}
+            onCopyTranscript={() => void copyTranscript(detail)}
+            onSaveTranscript={() => void saveTranscript(detail)}
+            onCopyTranscriptForAi={() => void copyTranscriptForAi(detail)}
             onFollowUp={() => setFollowUpFor(detail.session.id)}
             onOpenPersonByName={(n) => void openPersonByName(n)}
             onAssignCat={(name) => void doAssignCat(detail.session.id, name)}

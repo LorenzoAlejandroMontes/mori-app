@@ -71,6 +71,11 @@ const COMMANDS: Record<string, (args?: Record<string, unknown>) => unknown> = {
     });
   },
   recording_silence_secs: () => (params.get("silence") === "1" ? 3600 : 0),
+  export_markdown: (a) => {
+    (window as unknown as { __exported?: unknown }).__exported = a;
+    return "/preview/export/transcripts";
+  },
+  reveal_path: () => undefined,
   backups_dir: () => "/preview/backups",
   rotate_backups: () => [],
   audio_stats: () => ({ wav_count: 0, wav_bytes: 0, flac_count: 4, flac_bytes: 61_000_000 }),

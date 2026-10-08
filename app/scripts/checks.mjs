@@ -751,6 +751,21 @@ async function privacyAndNewChecks({ mods, d, makeSession }) {
   check("i titoli della sintesi scendono di un livello", mdOut.includes("### Di cosa si è parlato"));
   check("cose da fare come checklist", mdOut.includes("- [ ] Mandare il preventivo (Tu, entro 2026-09-18)") && mdOut.includes("- [x] Mockup (Giulia)"));
   check("decisioni", mdOut.includes("## Decisioni\n- Budget 18.000 € (18.000 €)"));
+  const segs = [
+    { start: 0, end: 4, speaker: "Tu", text: "Ciao Giulia." },
+    { start: 4, end: 9, speaker: "Tu", text: "Partiamo dal budget?" },
+    { start: 9, end: 20, speaker: "Interlocutore", text: "Sì, 18.000 euro." },
+    { start: 3725, end: 3730, speaker: "Tu", text: "Perfetto." },
+  ];
+  const nameOf = (l) => (l === "Tu" ? "Luca" : l === "Interlocutore" ? "Giulia" : l);
+  const turns = ex.transcriptTurns(segs, "", nameOf);
+  eq("righe di fila della stessa voce in una battuta", turns.length, 3);
+  eq("trascritto come testo, per intero", ex.transcriptToText(turns), "Luca: Ciao Giulia. Partiamo dal budget?\n\nGiulia: Sì, 18.000 euro.\n\nLuca: Perfetto.\n");
+  const trMd = ex.transcriptToMarkdown(call, turns, 3730);
+  check("markdown: titolo, voci e durata in testa", trMd.startsWith("# Kickoff: redesign/app\n") && trMd.includes("Luca, Giulia") && trMd.includes("1:02:10"));
+  check("markdown: ogni battuta con voce e minuto", trMd.includes("**Giulia** [00:09]\nSì, 18.000 euro.") && trMd.includes("**Luca** [1:02:05]\nPerfetto."));
+  const memoTurns = ex.transcriptTurns([], "Tu: Ciao.\ncome va?\nInterlocutore: Bene.", nameOf);
+  eq("senza tempi si legge il testo salvato", ex.transcriptToText(memoTurns), "Luca: Ciao. come va?\n\nGiulia: Bene.\n");
   const taken = new Set();
   const n1 = ex.exportFileName(call, taken);
   const n2 = ex.exportFileName(call, taken);

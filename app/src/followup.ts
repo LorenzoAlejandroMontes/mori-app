@@ -114,6 +114,12 @@ export async function exportAllMarkdown(
   return { dir, count: files.length };
 }
 
+/** One call's transcript as a .md file in ~/.mori/export/transcripts; the folder
+ *  it landed in comes back, to be shown. */
+export async function saveTranscriptFile(name: string, content: string): Promise<string> {
+  return invoke<string>("export_markdown", { folder: "transcripts", files: [{ name, content }] });
+}
+
 /** Open a folder of Mori's in the system file manager. */
 export async function revealInFolder(path: string): Promise<void> {
   await invoke("reveal_path", { path });

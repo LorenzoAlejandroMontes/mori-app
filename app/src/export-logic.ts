@@ -61,6 +61,75 @@ export function callToMarkdown(c: ExportCall): string {
   return out.join("\n").replace(/\n{3,}/g, "\n\n").trim() + "\n";
 }
 
+export type TranscriptTurn = { speaker: string; start: number | null; text: string };
+
+/** The transcript as turns: the lines one voice says in a row become one
+ *  paragraph, timed where it starts. `nameOf` turns the recorder's label into
+ *  the name to print. Without timed lines, the saved text is read line by line. */
+export function transcriptTurns(
+  segments: { start: number; speaker: string; text: string }[],
+  memo: string,
+  nameOf: (label: string) => string,
+): TranscriptTurn[] {
+  const turns: TranscriptTurn[] = [];
+  const push = (label: string, start: number | null, text: string) => {
+    const body = text.trim();
+    if (!body) return;
+    const speaker = label ? nameOf(label) : "";
+    const last = turns[turns.length - 1];
+    if (last && last.speaker === speaker) last.text += " " + body;
+    else turns.push({ speaker, start, text: body });
+  };
+  if (segments.length) {
+    for (const s of segments) push(s.speaker, s.start, s.text);
+    return turns;
+  }
+  for (const raw of memo.split("\n")) {
+    const line = raw.trim();
+    if (!line) continue;
+    const m = /^([^:]{1,40}):\s*(.*)$/.exec(line);
+    if (m && /^(Tu|Interlocutore|[A-ZÀ-Ù])/.test(m[1].trim())) push(m[1].trim(), null, m[2]);
+    else if (turns.length) turns[turns.length - 1].text += " " + line;
+    else turns.push({ speaker: "", start: null, text: line });
+  }
+  return turns;
+}
+
+function clock(secs: number): string {
+  const s = Math.max(0, Math.floor(secs));
+  const h = Math.floor(s / 3600);
+  const mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
+  const ss = String(s % 60).padStart(2, "0");
+  return h ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+
+/** The whole transcript as plain text, to paste anywhere: "Giulia: …". */
+export function transcriptToText(turns: TranscriptTurn[]): string {
+  return turns.map((x) => (x.speaker ? `${x.speaker}: ${x.text}` : x.text)).join("\n\n") + "\n";
+}
+
+/** The transcript as the Markdown file an assistant reads best: what the call
+ *  was and who spoke on top, then one block per turn with its time. */
+export function transcriptToMarkdown(
+  c: Pick<ExportCall, "title" | "startedAt">,
+  turns: TranscriptTurn[],
+  durationSecs = 0,
+): string {
+  const out: string[] = [`# ${c.title.trim() || t("Call senza titolo")}`, ""];
+  const day = fmtDay(c.startedAt);
+  if (day) out.push(`- ${t("Data")}: ${day}`);
+  if (durationSecs > 0) out.push(`- ${t("Durata")}: ${clock(durationSecs)}`);
+  const voices = [...new Set(turns.map((x) => x.speaker).filter(Boolean))];
+  if (voices.length) out.push(`- ${t("Voci")}: ${voices.join(", ")}`);
+  out.push(`- ${t("Origine")}: ${t("trascritto automatico di una call registrata; nomi e termini tecnici possono essere scritti male.")}`);
+  out.push("", "## " + t("Trascritto"));
+  for (const x of turns) {
+    const head = [x.speaker ? `**${x.speaker}**` : "", x.start != null ? `[${clock(x.start)}]` : ""].filter(Boolean).join(" ");
+    out.push("", ...(head ? [head] : []), x.text);
+  }
+  return out.join("\n") + "\n";
+}
+
 /** A safe, sortable file name: "2026-09-15 Allineamento backlog.md". */
 export function exportFileName(c: Pick<ExportCall, "title" | "startedAt">, taken: Set<string> = new Set()): string {
   const day = /^\d{4}-\d{2}-\d{2}/.exec(c.startedAt ?? "")?.[0] ?? t("senza-data");

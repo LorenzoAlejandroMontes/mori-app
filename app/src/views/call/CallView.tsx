@@ -18,6 +18,7 @@ import {
   IconChat,
   IconClose,
   IconCopy,
+  IconFile,
   IconMail,
   IconMore,
   IconPencil,
@@ -67,6 +68,9 @@ export default function CallView({
   onDelete,
   onTogglePrivate,
   onCopyMarkdown,
+  onCopyTranscript,
+  onSaveTranscript,
+  onCopyTranscriptForAi,
   onFollowUp,
   onOpenPersonByName,
   onAssignCat,
@@ -102,6 +106,9 @@ export default function CallView({
   onDelete: () => void;
   onTogglePrivate: (on: boolean) => void;
   onCopyMarkdown: () => void;
+  onCopyTranscript: () => void;
+  onSaveTranscript: () => void;
+  onCopyTranscriptForAi: () => void;
   onFollowUp: () => void;
   onOpenPersonByName: (name: string) => void;
   onAssignCat: (name: string) => void;
@@ -476,6 +483,22 @@ export default function CallView({
                   </>
                 )}
 
+                {tab === "trascritto" && detail.transcript && (
+                  <div className="tr-actions">
+                    <button className="btn ghost sm" data-action="copy-transcript" onClick={onCopyTranscript} title={t("Copia tutto il trascritto come testo")}>
+                      <IconCopy size={15} />
+                      {t("Copia tutto")}
+                    </button>
+                    <button className="btn ghost sm" data-action="copy-transcript-ai" onClick={onCopyTranscriptForAi} title={t("Copia il trascritto in Markdown, il formato che un assistente legge meglio")}>
+                      <IconChat size={15} />
+                      {t("Copia per le IA")}
+                    </button>
+                    <button className="btn ghost sm" data-action="save-transcript" onClick={onSaveTranscript} title={t("Salva il trascritto come file Markdown (.md)")}>
+                      <IconFile size={15} />
+                      {t("Salva come file")}
+                    </button>
+                  </div>
+                )}
                 {tab === "trascritto" && otherLabelsIn(detail.segments, detail.transcript).length > 0 && (
                   <SpeakerNamer
                     key={id /* a draft never follows you to another call */}
