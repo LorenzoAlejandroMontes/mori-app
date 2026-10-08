@@ -91,7 +91,8 @@ export function suggestQuestions(input: {
 export function statsLine(s: { calls: number; callsThisWeek: number; minutes: number; openMine: number }): string {
   const parts: string[] = [];
   if (s.callsThisWeek > 0) parts.push(tn(s.callsThisWeek, "1 call questa settimana", "{n} call questa settimana"));
-  else parts.push(tn(s.calls, "1 call in archivio", "{n} call in archivio"));
+  // A new Mori has only the sample calls: no count is better than "0 calls".
+  else if (s.calls > 0) parts.push(tn(s.calls, "1 call in archivio", "{n} call in archivio"));
   if (s.minutes >= 60) {
     const h = Math.floor(s.minutes / 60);
     const m = Math.round(s.minutes % 60);

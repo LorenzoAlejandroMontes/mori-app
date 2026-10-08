@@ -118,6 +118,7 @@ export default function HomeView({
   });
 
   const firstRun = !!data && (data.realCalls === 0 || !providerOk);
+  const stats = data ? statsLine({ calls: data.realCalls, callsThisWeek: thisWeek, minutes: data.minutes, openMine }) : "";
   const namesSet = myNames.join(",") !== DEFAULT_MY_NAMES.join(",");
   const firstName = callName(myNames);
   // One sentence around the hotkey, so the translation keeps its word order.
@@ -162,10 +163,10 @@ export default function HomeView({
             </h1>
             <p className="home-sub">
               {longDate(now)}
-              {data && (
+              {stats && (
                 <>
                   {" · "}
-                  {statsLine({ calls: data.realCalls, callsThisWeek: thisWeek, minutes: data.minutes, openMine })}
+                  {stats}
                 </>
               )}
             </p>
