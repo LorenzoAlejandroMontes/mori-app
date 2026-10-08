@@ -425,7 +425,7 @@ export default function App() {
     openOnTab.current = null;
   }, [selected]);
 
-  // Shortcuts that work everywhere (docs/DESIGN.md §5, "Scorciatoie"). The
+  // Shortcuts that work everywhere (docs/DESIGN.md §5, "Shortcuts"). The
   // ones of one letter stay quiet while the user is writing in a field.
   const goSectionRef = useRef(goSection);
   goSectionRef.current = goSection;
