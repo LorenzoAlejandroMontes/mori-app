@@ -55,7 +55,7 @@ First target: Apple Silicon, macOS 14.2 or later.
 Seen in CI on `macos-latest` (macOS 26, Apple Silicon), in the
 [macOS app](../.github/workflows/macos-app.yml) workflow:
 
-- `tauri build` produces `Mori.app` and `Mori_0.1.0_aarch64.dmg` (about 8 MB),
+- `tauri build` produces `Mori.app` and `Mori_<version>_aarch64.dmg` (about 8 MB),
   uploaded as the artifact `Mori-macos-apple-silicon-dmg`.
 - Inside the app taken from the `.dmg`: the helper at
   `Contents/MacOS/mori-sysaudio`, the Python scripts in
