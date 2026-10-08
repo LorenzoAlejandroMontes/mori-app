@@ -6,6 +6,10 @@
 
 > 🇮🇹 Mori è un compagno per le tue call: registra, trascrive, ricorda persone, decisioni e cose da fare, e risponde citando la call giusta. L'interfaccia è in inglese o in italiano, a scelta.
 
+[![Watch the Mori film](docs/screenshots/film.jpg)](https://lorenzomontes.com/work/mori/)
+
+**[Watch the film](https://lorenzomontes.com/work/mori/)** on lorenzomontes.com. Music: "Dreamer" by Kevin MacLeod (incompetech.com), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+
 ![Today: the page Mori opens on](docs/screenshots/today.png)
 
 ## What it does
