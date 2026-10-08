@@ -142,19 +142,23 @@ export default function HomeView({
     onAsk(q);
   }
 
+  // "Still up?" keeps its question mark, after the name when there is one: no "Still up?."
+  const asks = greeting(now).endsWith("?");
+  const hello = asks ? greeting(now).slice(0, -1) : greeting(now);
+
   return (
     <div className="home">
       <div className="home-scroll">
         <div className="home-col">
           <header className="home-head">
             <h1>
-              {greeting(now)}
+              {hello}
               {firstName && (
                 <>
                   , <em>{firstName}</em>
                 </>
               )}
-              .
+              {asks ? "?" : "."}
             </h1>
             <p className="home-sub">
               {longDate(now)}
